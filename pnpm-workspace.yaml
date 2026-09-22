@@ -12,6 +12,7 @@ allowBuilds:
   msgpackr-extract: false
   protobufjs: false
   ssh2: false
+  unrs-resolver: true
 
 # Supply-chain guard: refuse to install package versions published less than
 # 24h ago. Most malicious npm releases are detected and pulled within hours.

@@ -1,4 +1,4 @@
-import { type FastifyInstance } from 'fastify';
+import { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 
 /** A downstream dependency the API needs in order to serve traffic. */
 export interface DependencyCheck {
@@ -55,7 +55,12 @@ export interface HealthRoutesOptions {
 export function registerHealthRoutes(app: FastifyInstance, options: HealthRoutesOptions): void {
   app.get('/healthz', () => ({ status: 'ok' }));
 
-  app.get('/readyz', async (request, reply) => {
+  // Same report, two audiences: /readyz is the orchestrator probe, /api/status
+  // is part of the product surface (the browser only ever sees /api/*).
+  app.get('/api/status', readiness);
+  app.get('/readyz', readiness);
+
+  async function readiness(request: FastifyRequest, reply: FastifyReply) {
     const entries = await Promise.all(
       options.checks.map(async ({ name, check }): Promise<[string, CheckResult]> => {
         const startedAt = performance.now();
@@ -80,5 +85,5 @@ export function registerHealthRoutes(app: FastifyInstance, options: HealthRoutes
       checks: Object.fromEntries(entries),
     };
     return reply.status(allOk ? 200 : 503).send(report);
-  });
+  }
 }

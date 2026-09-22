@@ -36,3 +36,7 @@ eval/results/
 
 # python virtualenvs (uv)
 .venv/
+
+# next.js
+.next/
+next-env.d.ts

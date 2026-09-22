@@ -242,3 +242,17 @@ describe('security headers and CORS', () => {
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
+
+describe('product status endpoint', () => {
+  it('serves the readiness report under /api/status for the browser', async () => {
+    const server = await createApp([healthy('postgres'), failing('redis')]);
+
+    const response = await server.inject({ method: 'GET', url: '/api/status' });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      status: 'unavailable',
+      checks: { postgres: { status: 'ok' }, redis: { status: 'unavailable' } },
+    });
+  });
+});
