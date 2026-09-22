@@ -33,3 +33,6 @@ eval/results/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# python virtualenvs (uv)
+.venv/

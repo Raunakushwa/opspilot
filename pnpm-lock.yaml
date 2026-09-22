@@ -24,6 +24,8 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  apps/ai-service: {}
+
   apps/api:
     dependencies:
       '@fastify/cors':
