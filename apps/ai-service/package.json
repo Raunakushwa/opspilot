@@ -4,7 +4,7 @@
   "private": true,
   "description": "Turborepo wrapper around the Python AI service so one command checks the whole monorepo",
   "scripts": {
-    "dev": "uv run uvicorn opspilot_ai.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev": "LOG_PRETTY=true uv run uvicorn opspilot_ai.main:app --reload --host 0.0.0.0 --port 8000",
     "build": "uv sync --frozen",
     "lint": "uv run ruff check . && uv run ruff format --check .",
     "typecheck": "uv run mypy src tests",

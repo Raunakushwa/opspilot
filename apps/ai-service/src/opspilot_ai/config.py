@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "production"] = "development"
     log_level: Literal["debug", "info", "warning", "error"] = "info"
+    # Format is explicit rather than derived from app_env: containers emit JSON.
+    log_pretty: bool = False
     ai_service_host: str = "0.0.0.0"  # noqa: S104 - containers bind all interfaces
     ai_service_port: int = Field(default=8000, ge=1, le=65535)
     qdrant_url: HttpUrl = HttpUrl("http://localhost:6333")

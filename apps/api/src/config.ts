@@ -16,6 +16,10 @@ const commaSeparatedList = z.string().transform((value) =>
 const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  // Log *format* is independent of the environment: containers always emit JSON
+  // (pino-pretty is a dev dependency and absent from the runtime image), while
+  // `pnpm dev` opts into human-readable output.
+  LOG_PRETTY: envBoolean.default(false),
   API_HOST: z.string().min(1).default('0.0.0.0'),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),

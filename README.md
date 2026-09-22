@@ -35,6 +35,23 @@ docs/        architecture, ADRs, interview notes
 eval/        RAG evaluation datasets
 ```
 
+## Quick start
+
+```bash
+make setup                 # install dependencies, create .env from the template
+docker compose up --build  # or: make dev
+```
+
+Then open <http://localhost:3000>. The stack is `web`, `api`, `worker`,
+`ai-service`, `postgres`, `redis` and `qdrant`, plus a one-shot `migrate`
+job that applies migrations and provisions the application database role
+before the API and worker start.
+
+If a port is already taken, override it in `.env`
+(`POSTGRES_HOST_PORT`, `API_HOST_PORT`, …).
+
+Run `make help` for the full list of targets.
+
 ## Prerequisites
 
 - Node.js 24 (`.nvmrc`) and pnpm 11
@@ -51,7 +68,7 @@ eval/        RAG evaluation datasets
 | `pnpm test`         | Unit tests                     |
 | `pnpm format:check` | Prettier check                 |
 
-`make` targets and `docker compose up` arrive later in Phase 1.
+Equivalent `make` targets exist for each (`make lint`, `make test`, …).
 
 ## Troubleshooting
 
