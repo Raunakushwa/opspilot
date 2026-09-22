@@ -4,3 +4,5 @@ dist/
 coverage/
 .turbo/
 packages/database/migrations/meta/
+apps/web/next-env.d.ts
+apps/web/.next/

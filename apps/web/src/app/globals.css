@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/*
+ * OpsPilot visual language: a 1-bit "workstation" look — hard 1px borders,
+ * square corners, black title bars, monospace metadata — applied to a dense
+ * engineering dashboard rather than a marketing page. Colour is reserved for
+ * meaning: severity, status, and a single accent.
+ */
+@theme {
+  --color-paper: #fefefe;
+  --color-ink: #1e1e1e;
+  --color-ink-muted: #5c5c5c;
+  --color-panel: #dedede;
+  --color-panel-edge: #c4c4c4;
+  --color-accent: #f386a1;
+  --color-accent-strong: #d45bb6;
+
+  /* Severity and status are the only other colour carriers. */
+  --color-sev1: #d4183d;
+  --color-sev2: #d4661b;
+  --color-sev3: #b58900;
+  --color-sev4: #5c5c5c;
+  --color-ok: #03aa5c;
+  --color-info: #09aea1;
+
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --radius-window: 0px;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+}
+
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
