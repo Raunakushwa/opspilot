@@ -33,7 +33,26 @@ Hand-written SQL under `packages/database/migrations`, applied by a runner that:
 - sets **`lock_timeout`**, so a migration that cannot acquire its table lock
   fails fast instead of queueing and blocking every query behind it.
 
-## Schema conventions (Phase 2)
+## Tenant isolation (implemented)
+
+Every tenant table has row-level security enabled and forced, with a policy
+comparing `org_id` to `app.current_org_id`. `withTenant()` opens a transaction
+and sets that value with `SET LOCAL` semantics, so it cannot leak to the next
+request that borrows the same pooled connection.
+
+`current_setting('app.current_org_id', true)` returns NULL when unset, and
+`org_id = NULL` is NULL — so **the default is deny**: a query that forgets to
+establish tenant context returns no rows rather than every organization's rows.
+
+`organizations`, `users` and `sessions` are deliberately not policy-scoped:
+authentication happens before any organization is known. Access to another
+user's row goes through a membership join in the API, and sessions are only ever
+looked up by token hash.
+
+A test asserts that every table listed in `TENANT_TABLES` has RLS enabled and at
+least one policy, so adding a tenant table without a policy fails CI.
+
+## Schema conventions (implemented for identity and tenancy)
 
 - **IDs**: UUIDv7 generated in the application — time-ordered, index-friendly,
   usable as keyset cursors. Incidents additionally have a per-organization

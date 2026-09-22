@@ -4,6 +4,8 @@ import pg from 'pg';
 import * as schema from './schema/index.js';
 
 export type Database = NodePgDatabase<typeof schema>;
+/** Re-exported so consumers do not need a direct `pg` dependency. */
+export type DatabasePool = pg.Pool;
 
 export interface PoolOptions {
   connectionString: string;
