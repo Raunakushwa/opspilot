@@ -3,3 +3,4 @@ dist/
 .next/
 coverage/
 .turbo/
+packages/database/migrations/meta/

@@ -53,6 +53,13 @@ eval/        RAG evaluation datasets
 
 `make` targets and `docker compose up` arrive later in Phase 1.
 
+## Troubleshooting
+
+**Integration tests fail with `Log stream ended and message "/.*Started.*/" was not received`.**
+Testcontainers' cleanup container (Ryuk) cannot reach the Docker socket, which is
+common on SELinux hosts. Run with `TESTCONTAINERS_RYUK_PRIVILEGED=true`. Prefer this
+over `TESTCONTAINERS_RYUK_DISABLED=true`, which leaks containers when a test run is killed.
+
 ## Roadmap
 
 1. Foundation — monorepo, Docker Compose, Postgres, Redis, CI ← _current_

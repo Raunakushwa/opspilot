@@ -4,8 +4,13 @@ packages:
 
 # pnpm blocks dependency install scripts by default; allow only reviewed ones.
 # esbuild: downloads its platform binary (used by tsx and vitest).
+# Denied: ssh2/cpu-features (optional native speedups, Docker-over-SSH is unused)
+# and protobufjs (post-install version check only), all via testcontainers.
 allowBuilds:
+  cpu-features: false
   esbuild: true
+  protobufjs: false
+  ssh2: false
 
 # Supply-chain guard: refuse to install package versions published less than
 # 24h ago. Most malicious npm releases are detected and pulled within hours.
