@@ -2,6 +2,11 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+# pnpm blocks dependency install scripts by default; allow only reviewed ones.
+# esbuild: downloads its platform binary (used by tsx and vitest).
+allowBuilds:
+  esbuild: true
+
 # Supply-chain guard: refuse to install package versions published less than
 # 24h ago. Most malicious npm releases are detected and pulled within hours.
 minimumReleaseAge: 1440
