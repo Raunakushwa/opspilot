@@ -4,6 +4,8 @@ import { Redis } from 'ioredis';
 import { buildApp } from './app.js';
 import { createAuthRepository } from './modules/auth/repository.js';
 import { createAuthService } from './modules/auth/service.js';
+import { createOrganizationRepository } from './modules/organizations/repository.js';
+import { createOrganizationService } from './modules/organizations/service.js';
 import { ConfigError, loadConfig } from './config.js';
 import { postgresCheck, redisCheck } from './platform/dependencies.js';
 
@@ -24,15 +26,21 @@ async function main(): Promise<void> {
     maxRetriesPerRequest: 1,
   });
 
+  const db = createDatabase(pool);
   const auth = createAuthService({
-    repository: createAuthRepository(createDatabase(pool)),
+    repository: createAuthRepository(db),
     sessionTtlMs: config.SESSION_TTL_HOURS * 60 * 60 * 1000,
+  });
+  const organizations = createOrganizationService({
+    repository: createOrganizationRepository(db),
   });
 
   const app = await buildApp({
     config,
     checks: [postgresCheck(pool), redisCheck(redis)],
     auth,
+    organizations,
+    db,
     rateLimitRedis: redis,
   });
 

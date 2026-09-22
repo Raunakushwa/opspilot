@@ -6,17 +6,25 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController } from 'fastify';
 
+import { type Database } from '@opspilot/database';
+
 import { type Config } from './config.js';
 import { registerErrorHandlers } from './platform/errors.js';
 import { type DependencyCheck, registerHealthRoutes } from './platform/health.js';
 import { registerSessionAuth } from './modules/auth/plugin.js';
 import { registerAuthRoutes } from './modules/auth/routes.js';
 import { type AuthService } from './modules/auth/service.js';
+import { registerOrganizationRoutes } from './modules/organizations/routes.js';
+import { type OrganizationService } from './modules/organizations/service.js';
+import { registerOrgContext } from './platform/org-context.js';
 
 export interface AppDependencies {
   config: Config;
   checks: DependencyCheck[];
   auth?: AuthService;
+  organizations?: OrganizationService;
+  /** Database used by the organization-context hook to resolve membership. */
+  db?: Database;
   /** Redis client backing the rate limiter; omitted in tests for an in-memory limiter. */
   rateLimitRedis?: unknown;
 }
@@ -50,6 +58,8 @@ export async function buildApp({
   config,
   checks,
   auth,
+  organizations,
+  db,
   rateLimitRedis,
 }: AppDependencies): Promise<FastifyInstance> {
   const app = Fastify({
@@ -96,12 +106,21 @@ export async function buildApp({
 
   if (auth) {
     registerSessionAuth(app, auth);
+    if (db) {
+      // Registered after session auth so the caller is known, and before the
+      // routes so every /api/orgs/:orgId handler has verified membership.
+      registerOrgContext(app, db);
+    }
     registerAuthRoutes(app, {
       service: auth,
       // Cookies are Secure everywhere except plain-HTTP local development.
       secureCookies: config.NODE_ENV === 'production' || config.COOKIE_SECURE,
       loginRateLimit: { max: config.AUTH_RATE_LIMIT_MAX, timeWindow: config.RATE_LIMIT_WINDOW },
     });
+  }
+
+  if (organizations) {
+    registerOrganizationRoutes(app, organizations);
   }
 
   return app;
