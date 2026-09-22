@@ -1,7 +1,9 @@
-import { createPool } from '@opspilot/database';
+import { createDatabase, createPool } from '@opspilot/database';
 import { Redis } from 'ioredis';
 
 import { buildApp } from './app.js';
+import { createAuthRepository } from './modules/auth/repository.js';
+import { createAuthService } from './modules/auth/service.js';
 import { ConfigError, loadConfig } from './config.js';
 import { postgresCheck, redisCheck } from './platform/dependencies.js';
 
@@ -22,7 +24,17 @@ async function main(): Promise<void> {
     maxRetriesPerRequest: 1,
   });
 
-  const app = await buildApp({ config, checks: [postgresCheck(pool), redisCheck(redis)] });
+  const auth = createAuthService({
+    repository: createAuthRepository(createDatabase(pool)),
+    sessionTtlMs: config.SESSION_TTL_HOURS * 60 * 60 * 1000,
+  });
+
+  const app = await buildApp({
+    config,
+    checks: [postgresCheck(pool), redisCheck(redis)],
+    auth,
+    rateLimitRedis: redis,
+  });
 
   // An idle client losing its connection must not crash the process; the pool
   // replaces it and readiness reports the outage.

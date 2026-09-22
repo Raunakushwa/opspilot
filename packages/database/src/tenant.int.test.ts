@@ -15,7 +15,7 @@ import {
   TENANT_TABLES,
   users,
 } from './schema/index.js';
-import { InvalidTenantError, withTenant, withoutTenant } from './tenant.js';
+import { InvalidTenantError, withTenant, withoutTenant, withUser } from './tenant.js';
 
 /**
  * Drizzle wraps driver errors, so the PostgreSQL message and code live on
@@ -259,5 +259,69 @@ describe('policy coverage', () => {
         hasPolicy: true,
       });
     }
+  });
+});
+
+describe('membership self-read policy', () => {
+  it('lets a user see their own memberships without organization context', async () => {
+    // This is the query that must work at login, before any organization is
+    // chosen; the tenant policy alone could never satisfy it.
+    const [member] = await withoutTenant(db, (tx) =>
+      tx
+        .insert(users)
+        .values({ email: 'self@acme.test', passwordHash: 'x', displayName: 'Self' })
+        .returning(),
+    );
+    const memberId = member?.id ?? '';
+    for (const org of [acme, globex]) {
+      await withTenant(db, org.id, (tx) =>
+        tx.insert(memberships).values({ orgId: org.id, userId: memberId, role: 'ADMIN' }),
+      );
+    }
+
+    const own = await withUser(db, memberId, (tx) => tx.select().from(memberships));
+
+    expect(own.map((row) => row.orgId).sort()).toEqual([acme.id, globex.id].sort());
+  });
+
+  it('does not expose anyone else memberships', async () => {
+    const [other] = await withoutTenant(db, (tx) =>
+      tx
+        .insert(users)
+        .values({ email: 'other@acme.test', passwordHash: 'x', displayName: 'Other' })
+        .returning(),
+    );
+    const otherId = other?.id ?? '';
+    await withTenant(db, acme.id, (tx) =>
+      tx.insert(memberships).values({ orgId: acme.id, userId: otherId }),
+    );
+
+    const [stranger] = await withoutTenant(db, (tx) =>
+      tx
+        .insert(users)
+        .values({ email: 'stranger@acme.test', passwordHash: 'x', displayName: 'Stranger' })
+        .returning(),
+    );
+
+    const visible = await withUser(db, stranger?.id ?? '', (tx) => tx.select().from(memberships));
+
+    expect(visible).toEqual([]);
+  });
+
+  it('does not allow writing a membership with only user context', async () => {
+    const [user] = await withoutTenant(db, (tx) =>
+      tx
+        .insert(users)
+        .values({ email: 'writer@acme.test', passwordHash: 'x', displayName: 'Writer' })
+        .returning(),
+    );
+
+    // Self-read is SELECT-only: a user cannot add themselves to an organization.
+    await expectDbError(
+      withUser(db, user?.id ?? '', (tx) =>
+        tx.insert(memberships).values({ orgId: acme.id, userId: user?.id ?? '', role: 'OWNER' }),
+      ),
+      RLS_VIOLATION,
+    );
   });
 });

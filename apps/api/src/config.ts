@@ -27,6 +27,17 @@ const configSchema = z.object({
   CORS_ORIGINS: commaSeparatedList.pipe(z.array(z.url())).default(['http://localhost:3000']),
   TRUST_PROXY: envBoolean.default(false),
   READINESS_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+  COOKIE_SECURE: envBoolean.default(false),
+  SESSION_TTL_HOURS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(24 * 30)
+    .default(24 * 7),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_WINDOW: z.string().default('1 minute'),
+  /** Credential endpoints get a much tighter budget than ordinary routes. */
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
 });
 
 export type Config = z.infer<typeof configSchema>;
