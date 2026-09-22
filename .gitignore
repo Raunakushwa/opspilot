@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.venv/
+
+# build output
+dist/
+.next/
+out/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# tooling caches
+.turbo/
+.eslintcache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+htmlcov/
+.coverage
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# eval output (machine-generated; never committed)
+eval/results/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

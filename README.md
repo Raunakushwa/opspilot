@@ -1,0 +1,69 @@
+# OpsPilot
+
+Multi-tenant incident management and engineering collaboration platform with an
+AI incident copilot: hybrid-search RAG over runbooks and postmortems, a LangGraph
+investigation agent that cites its evidence, and human approval for every write action.
+
+> **Status:** Phase 1 (repository foundation) in progress. Nothing below the
+> "Repository layout" section is implemented yet — see [Roadmap](#roadmap).
+
+## Architecture at a glance
+
+```
+web (Next.js) ──REST+SSE──▶ api (Fastify) ──▶ PostgreSQL (source of truth, RLS)
+                               │  ▲               Redis (queues, pub/sub, cache)
+                               │  └── internal Tool Gateway ◀─┐
+                               ▼                              │ read tools (delegation token)
+                          worker (BullMQ) ──▶ ai-service (FastAPI + LangGraph) ──▶ Qdrant, LLM
+```
+
+- The **api** is the only authorization authority and the only writer of domain data.
+- The **ai-service** has no database credentials; the agent reads through the api's
+  Tool Gateway and can only _propose_ write actions, which a human approves.
+- Every domain change writes state, timeline event, audit log and an outbox event in
+  one transaction; the worker relays the outbox to real-time clients and notifications.
+
+Full design: `docs/architecture.md` (Phase 1, PR 10).
+
+## Repository layout
+
+```
+apps/        web · api · worker · ai-service
+packages/    config (lint/ts/prettier presets) · contracts · shared · database · ui
+infra/       docker · terraform
+docs/        architecture, ADRs, interview notes
+eval/        RAG evaluation datasets
+```
+
+## Prerequisites
+
+- Node.js 24 (`.nvmrc`) and pnpm 11
+- Python 3.12+ and [uv](https://docs.astral.sh/uv/)
+- Docker with Compose v2
+
+## Common commands
+
+| Command             | What it does                   |
+| ------------------- | ------------------------------ |
+| `pnpm install`      | Install workspace dependencies |
+| `pnpm lint`         | ESLint across all packages     |
+| `pnpm typecheck`    | TypeScript project checks      |
+| `pnpm test`         | Unit tests                     |
+| `pnpm format:check` | Prettier check                 |
+
+`make` targets and `docker compose up` arrive later in Phase 1.
+
+## Roadmap
+
+1. Foundation — monorepo, Docker Compose, Postgres, Redis, CI ← _current_
+2. Auth, organizations, RBAC, schema
+3. Incidents, comments, timeline, audit log
+4. **Thin vertical slice** of the demo scenario end to end (investigate → cite → propose rollback → approve → audit)
+5. Real-time, notifications, workers
+6. Knowledge base ingestion, hybrid search, reranking, RAG evaluation
+7. Full LangGraph workflow, guardrails, observability, cost tracking
+8. MCP server, hardening, Terraform/AWS, deployment
+
+## License
+
+[MIT](LICENSE)
