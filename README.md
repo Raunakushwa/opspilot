@@ -1,5 +1,7 @@
 # OpsPilot
 
+[![CI](https://github.com/Raunakushwa/opspilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Raunakushwa/opspilot/actions/workflows/ci.yml)
+
 Multi-tenant incident management and engineering collaboration platform with an
 AI incident copilot: hybrid-search RAG over runbooks and postmortems, a LangGraph
 investigation agent that cites its evidence, and human approval for every write action.
@@ -23,7 +25,10 @@ web (Next.js) ──REST+SSE──▶ api (Fastify) ──▶ PostgreSQL (source
 - Every domain change writes state, timeline event, audit log and an outbox event in
   one transaction; the worker relays the outbox to real-time clients and notifications.
 
-Full design: `docs/architecture.md` (Phase 1, PR 10).
+Full design: [docs/architecture.md](docs/architecture.md). Every significant
+choice is recorded as an [ADR](docs/decisions/) — including
+[why this exists at all](docs/decisions/ADR-011-product-layer-vs-general-agent.md)
+when a general-purpose agent can already read logs.
 
 ## Repository layout
 
@@ -87,6 +92,17 @@ over `TESTCONTAINERS_RYUK_DISABLED=true`, which leaks containers when a test run
 6. Knowledge base ingestion, hybrid search, reranking, RAG evaluation
 7. Full LangGraph workflow, guardrails, observability, cost tracking
 8. MCP server, hardening, Terraform/AWS, deployment
+
+## Documentation
+
+| Document                                      | Contents                                                 |
+| --------------------------------------------- | -------------------------------------------------------- |
+| [architecture.md](docs/architecture.md)       | Topology, service boundaries, invariants, current status |
+| [database.md](docs/database.md)               | Privilege model, migrations, schema and index strategy   |
+| [deployment.md](docs/deployment.md)           | Local stack, images, CI, AWS target                      |
+| [security.md](docs/security.md)               | Implemented controls, phase plan, known gaps             |
+| [interview-notes.md](docs/interview-notes.md) | Trade-offs, failure modes, what is not claimed           |
+| [decisions/](docs/decisions/)                 | Architecture Decision Records                            |
 
 ## License
 
