@@ -1,5 +1,5 @@
+import { createPool } from '@opspilot/database';
 import { Redis } from 'ioredis';
-import pg from 'pg';
 
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -10,7 +10,10 @@ const SHUTDOWN_GRACE_MS = 10_000;
 async function main(): Promise<void> {
   const config = loadConfig();
 
-  const pool = new pg.Pool({ connectionString: config.DATABASE_URL, max: 10 });
+  const pool = createPool({
+    connectionString: config.DATABASE_URL,
+    applicationName: 'opspilot-api',
+  });
   // Without enableOfflineQueue=false, commands issued while Redis is down would
   // queue indefinitely and the readiness probe would time out instead of failing fast.
   const redis = new Redis(config.REDIS_URL, {

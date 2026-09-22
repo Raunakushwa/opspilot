@@ -1,9 +1,9 @@
+import { type DatabasePool } from '@opspilot/database';
 import { type Redis } from 'ioredis';
-import { type Pool } from 'pg';
 
 import { type DependencyCheck } from './health.js';
 
-export function postgresCheck(pool: Pool): DependencyCheck {
+export function postgresCheck(pool: DatabasePool): DependencyCheck {
   return {
     name: 'postgres',
     check: async () => {

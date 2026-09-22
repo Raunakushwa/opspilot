@@ -2,6 +2,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import journal from '../migrations/meta/_journal.json' with { type: 'json' };
 import { runMigrations } from './migrate.js';
 import { provisionAppUser } from './provision.js';
 
@@ -54,8 +55,8 @@ afterAll(async () => {
 });
 
 describe('runMigrations', () => {
-  it('applies the initial migration', async () => {
-    expect(await appliedMigrationCount(ownerUrl)).toBe(1);
+  it('applies every migration in the journal', async () => {
+    expect(await appliedMigrationCount(ownerUrl)).toBe(journal.entries.length);
 
     const extensions = await withClient(ownerUrl, (client) =>
       client.query<{ extname: string }>(
@@ -68,7 +69,7 @@ describe('runMigrations', () => {
   it('is idempotent when re-run', async () => {
     await runMigrations({ connectionString: ownerUrl });
 
-    expect(await appliedMigrationCount(ownerUrl)).toBe(1);
+    expect(await appliedMigrationCount(ownerUrl)).toBe(journal.entries.length);
   });
 
   it('serialises concurrent runners against a fresh database', async () => {
@@ -77,7 +78,7 @@ describe('runMigrations', () => {
 
     await Promise.all([1, 2, 3, 4].map(() => runMigrations({ connectionString: url })));
 
-    expect(await appliedMigrationCount(url)).toBe(1);
+    expect(await appliedMigrationCount(url)).toBe(journal.entries.length);
   });
 });
 

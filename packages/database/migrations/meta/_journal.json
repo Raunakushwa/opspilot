@@ -8,6 +8,20 @@
       "when": 1790095171098,
       "tag": "0000_roles_and_extensions",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790108316944,
+      "tag": "0001_identity_and_tenancy",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790108336421,
+      "tag": "0002_row_level_security",
+      "breakpoints": true
     }
   ]
 }
