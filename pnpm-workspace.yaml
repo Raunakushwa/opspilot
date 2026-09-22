@@ -1,0 +1,7 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Supply-chain guard: refuse to install package versions published less than
+# 24h ago. Most malicious npm releases are detected and pulled within hours.
+minimumReleaseAge: 1440
