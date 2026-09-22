@@ -6,7 +6,7 @@ from .config import get_settings
 from .logging import configure_logging
 
 settings = get_settings()
-configure_logging(settings.log_level, json_output=settings.app_env != "development")
+configure_logging(settings.log_level, json_output=not settings.log_pretty)
 
 _qdrant = create_qdrant_client(settings)
 

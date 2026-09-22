@@ -12,6 +12,8 @@ const apiOrigin = process.env.API_ORIGIN ?? 'http://localhost:4000';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Standalone output keeps the runtime image to the server bundle plus traced deps.
+  output: 'standalone',
   rewrites() {
     return Promise.resolve([{ source: '/api/:path*', destination: `${apiOrigin}/api/:path*` }]);
   },

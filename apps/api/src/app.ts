@@ -28,7 +28,7 @@ function loggerOptions(config: Config): NonNullable<FastifyServerOptions['logger
       paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
       censor: '[REDACTED]',
     },
-    ...(config.NODE_ENV === 'development'
+    ...(config.LOG_PRETTY
       ? { transport: { target: 'pino-pretty', options: { translateTime: 'SYS:HH:MM:ss.l' } } }
       : {}),
   };

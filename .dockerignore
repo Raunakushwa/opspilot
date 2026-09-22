@@ -1,0 +1,11 @@
+**/node_modules
+**/.next
+**/dist
+**/.venv
+**/coverage
+**/.turbo
+**/__pycache__
+.git
+.github
+eval/results
+*.md

@@ -3,6 +3,7 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runMigrations } from './migrate.js';
+import { provisionAppUser } from './provision.js';
 
 const APP_USER = 'opspilot_app';
 const APP_PASSWORD = 'app-test-password';
@@ -121,5 +122,57 @@ describe('application role', () => {
     await expect(
       withClient(appUrl(), (client) => client.query('SELECT * FROM drizzle.__drizzle_migrations')),
     ).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe('provisionAppUser', () => {
+  const username = 'app_provisioned';
+  const password = 'a-long-enough-password';
+
+  it('creates a login role that inherits app_rw and can use the data', async () => {
+    await provisionAppUser({ connectionString: ownerUrl, username, password });
+
+    const role = await withClient(ownerUrl, (client) =>
+      client.query<{ rolcanlogin: boolean; rolsuper: boolean }>(
+        'SELECT rolcanlogin, rolsuper FROM pg_roles WHERE rolname = $1',
+        [username],
+      ),
+    );
+    expect(role.rows[0]).toEqual({ rolcanlogin: true, rolsuper: false });
+
+    await withClient(ownerUrl, (client) =>
+      client.query('CREATE TABLE IF NOT EXISTS provisioned_widgets (id int)'),
+    );
+    await withClient(urlFor(container.getDatabase(), username, password), async (client) => {
+      await client.query('INSERT INTO provisioned_widgets VALUES (1)');
+      await expect(client.query('CREATE TABLE nope (id int)')).rejects.toThrow(/permission denied/);
+    });
+  });
+
+  it('is idempotent and rotates the password on re-run', async () => {
+    const rotated = 'another-long-password';
+
+    await provisionAppUser({ connectionString: ownerUrl, username, password });
+    await provisionAppUser({ connectionString: ownerUrl, username, password: rotated });
+
+    await withClient(urlFor(container.getDatabase(), username, rotated), (client) =>
+      client.query('SELECT 1'),
+    );
+  });
+
+  it('rejects role names that are not plain identifiers', async () => {
+    await expect(
+      provisionAppUser({
+        connectionString: ownerUrl,
+        username: 'evil"; DROP TABLE widgets; --',
+        password,
+      }),
+    ).rejects.toThrow(/Invalid role name/);
+  });
+
+  it('rejects a weak password before touching the database', async () => {
+    await expect(
+      provisionAppUser({ connectionString: ownerUrl, username: 'app_weak', password: 'short' }),
+    ).rejects.toThrow(/at least 12 characters/);
   });
 });

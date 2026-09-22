@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const logger = pino({
     level: config.LOG_LEVEL,
-    ...(config.NODE_ENV === 'development'
+    ...(config.LOG_PRETTY
       ? { transport: { target: 'pino-pretty', options: { translateTime: 'SYS:HH:MM:ss.l' } } }
       : {}),
   });

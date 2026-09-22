@@ -3,9 +3,15 @@ import { z } from 'zod';
 // Mirrors apps/api/src/config.ts deliberately: the two services validate
 // different variables. A shared loader lands in packages/shared once a third
 // consumer exists.
+const envBoolean = z
+  .enum(['true', 'false', '1', '0'])
+  .transform((value) => value === 'true' || value === '1');
+
 const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  // See apps/api/src/config.ts: format is explicit, not derived from NODE_ENV.
+  LOG_PRETTY: envBoolean.default(false),
   REDIS_URL: z.url({ protocol: /^rediss?$/ }),
   WORKER_HOST: z.string().min(1).default('0.0.0.0'),
   WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(4100),
