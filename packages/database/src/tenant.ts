@@ -40,6 +40,27 @@ export async function withTenant<T>(
 }
 
 /**
+ * Runs `fn` in a transaction that identifies the current user but not an
+ * organization. Used by the few queries that must precede organization
+ * context — "which organizations do I belong to?" — which the
+ * `memberships_self_read` policy allows and nothing else.
+ */
+export async function withUser<T>(
+  db: Database,
+  userId: string,
+  fn: (tx: Database) => Promise<T>,
+): Promise<T> {
+  if (!UUID.test(userId)) {
+    throw new InvalidTenantError(userId);
+  }
+
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
+    return fn(tx);
+  });
+}
+
+/**
  * Runs `fn` in a transaction with no tenant context, for the few operations
  * that legitimately precede one: login, session lookup, organization creation.
  * Tenant tables are unreadable inside it.

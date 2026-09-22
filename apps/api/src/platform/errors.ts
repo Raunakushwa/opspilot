@@ -1,5 +1,7 @@
 import { STATUS_CODES } from 'node:http';
 
+import { ZodError } from 'zod';
+
 import {
   type FastifyError,
   type FastifyInstance,
@@ -70,6 +72,18 @@ export function registerErrorHandlers(app: FastifyInstance): void {
         code: error.code,
         title: error.message,
         ...(error.detail === undefined ? {} : { detail: error.detail }),
+      });
+    }
+
+    if (error instanceof ZodError) {
+      return sendProblem(reply, request, {
+        status: 400,
+        code: 'validation_failed',
+        title: 'Request validation failed',
+        errors: error.issues.map((issue) => ({
+          path: `/${issue.path.join('/')}`,
+          message: issue.message,
+        })),
       });
     }
 
