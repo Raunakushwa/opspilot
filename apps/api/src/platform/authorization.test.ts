@@ -63,8 +63,8 @@ describe('permission matrix', () => {
   it('keeps roles strictly nested: each level includes the one below', () => {
     const order: Role[] = ['VIEWER', 'ENGINEER', 'ADMIN', 'OWNER'];
     for (let i = 1; i < order.length; i += 1) {
-      const lower = permissionsFor(order[i - 1] as Role);
-      const higher = permissionsFor(order[i] as Role);
+      const lower = permissionsFor(order[i - 1] ?? 'VIEWER');
+      const higher = permissionsFor(order[i] ?? 'OWNER');
       expect(higher).toEqual(expect.arrayContaining(lower));
       expect(higher.length).toBeGreaterThan(lower.length);
     }

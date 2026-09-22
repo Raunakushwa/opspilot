@@ -30,6 +30,16 @@ let redis: Redis;
 let db: Database;
 let app: FastifyInstance;
 
+/**
+ * Typed access to an injected response body. Fastify's `json()` is `any`, and
+ * the call site is the only place that knows the shape.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- T is supplied by the caller
+function body<T>(response: { json: () => unknown }): T {
+  const parsed: unknown = response.json();
+  return parsed as T;
+}
+
 /** Registers a user and returns the cookie header value for their session. */
 async function signUp(email: string): Promise<{ cookie: string; userId: string }> {
   const response = await app.inject({
@@ -38,7 +48,7 @@ async function signUp(email: string): Promise<{ cookie: string; userId: string }
     payload: { email, password: 'a-long-enough-password', displayName: email.split('@')[0] },
   });
   const cookie = response.cookies.find((c) => c.name === SESSION_COOKIE)?.value ?? '';
-  return { cookie, userId: (response.json() as { user: { id: string } }).user.id };
+  return { cookie, userId: body<{ user: { id: string } }>(response).user.id };
 }
 
 function as(cookie: string) {
@@ -144,7 +154,7 @@ describe('tenant boundaries', () => {
       cookies: as(owner.cookie),
       payload: { name: 'Private Co', slug: 'private-co' },
     });
-    const orgId = (created.json() as { id: string }).id;
+    const orgId = body<{ id: string }>(created).id;
 
     const outsider = await signUp('outsider@globex.test');
     const response = await app.inject({
@@ -199,7 +209,7 @@ describe('tenant boundaries', () => {
 
     const list = await app.inject({ method: 'GET', url: '/api/orgs', cookies: as(a.cookie) });
 
-    const slugs = (list.json() as { data: { slug: string }[] }).data.map((o) => o.slug);
+    const slugs = body<{ data: { slug: string }[] }>(list).data.map((org) => org.slug);
     expect(slugs).toEqual(['a-co']);
   });
 });
@@ -217,7 +227,7 @@ describe('membership management', () => {
       cookies: as(ownerCookie),
       payload: { name: 'Members Co', slug: 'members-co' },
     });
-    orgId = (created.json() as { id: string }).id;
+    orgId = body<{ id: string }>(created).id;
     await signUp('engineer@acme.test');
     await signUp('viewer@acme.test');
     await signUp('admin@acme.test');
@@ -260,14 +270,14 @@ describe('membership management', () => {
   });
 
   it('refuses to remove the last owner, which would orphan the organization', async () => {
-    const owner = (
+    const owner = body<{ data: { userId: string; role: string }[] }>(
       await app.inject({
         method: 'GET',
         url: `/api/orgs/${orgId}/members`,
         cookies: as(ownerCookie),
-      })
-    ).json() as { data: { userId: string; role: string }[] };
-    const ownerId = owner.data.find((m) => m.role === 'OWNER')?.userId ?? '';
+      }),
+    );
+    const ownerId = owner.data.find((member) => member.role === 'OWNER')?.userId ?? '';
 
     const response = await app.inject({
       method: 'DELETE',
@@ -297,7 +307,7 @@ describe('role enforcement', () => {
       cookies: as(ownerCookie),
       payload: { name: 'Roles Co', slug: 'roles-co' },
     });
-    orgId = (created.json() as { id: string }).id;
+    orgId = body<{ id: string }>(created).id;
 
     const engineer = await signUp('eng@roles.test');
     const viewer = await signUp('view@roles.test');
@@ -339,9 +349,9 @@ describe('role enforcement', () => {
       cookies: as(viewerCookie),
     });
 
-    const body = response.json() as { role: string; permissions: string[] };
-    expect(body.role).toBe('VIEWER');
-    expect(body.permissions).not.toContain('member:manage');
+    const payload = body<{ role: string; permissions: string[] }>(response);
+    expect(payload.role).toBe('VIEWER');
+    expect(payload.permissions).not.toContain('member:manage');
   });
 
   it.each([
