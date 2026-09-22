@@ -18,6 +18,11 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": ["TESTCONTAINERS_*", "DOCKER_HOST"]
     }
   }
 }
