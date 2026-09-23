@@ -30,6 +30,9 @@ ps: ## Show service status
 logs: ## Follow logs for all services
 	$(COMPOSE) logs -f
 
+seed: ## Load the demo organization (idempotent)
+	$(COMPOSE) run --rm -e SEED_DEMO=true migrate
+
 migrate: ## Run database migrations and provision the application role
 	$(COMPOSE) run --rm migrate
 
