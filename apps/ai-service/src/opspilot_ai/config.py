@@ -26,6 +26,22 @@ class Settings(BaseSettings):
     qdrant_api_key: str | None = None
     readiness_timeout_ms: int = Field(default=2000, gt=0)
 
+    # Retrieval. "hashing"/"lexical" need no model download, which keeps tests
+    # and CI offline; real deployments use fastembed models.
+    embedding_provider: Literal["fastembed", "hashing"] = "fastembed"
+    reranker_provider: Literal["cross-encoder", "lexical"] = "cross-encoder"
+
+    # LLM. One adapter serves Groq, OpenAI-compatible endpoints and Ollama.
+    llm_provider: Literal["openai-compatible", "fake"] = "openai-compatible"
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_api_key: str | None = None
+    llm_model: str = "llama-3.3-70b-versatile"
+    llm_supports_json_schema: bool = True
+
+    # Shared secret for calls from the worker. The AI service is internal and
+    # must never be reachable without it.
+    internal_api_token: str | None = None
+
 
 class ConfigError(Exception):
     """Configuration is invalid; the message names fields but never their values."""

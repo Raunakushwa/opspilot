@@ -1,10 +1,15 @@
+import { createDatabase, createPool } from '@opspilot/database';
 import { Redis } from 'ioredis';
 import { pino } from 'pino';
 
+import { createAiServiceClient } from './clients/ai-service.js';
 import { ConfigError, loadConfig } from './config.js';
 import { createHealthServer } from './health.js';
+import { createIngestionProcessor } from './processors/ingestion.js';
 import { handlers } from './processors/index.js';
-import { systemPing } from './queues/definitions.js';
+import { reconcilePendingIngestion } from './processors/reconcile.js';
+import { ingestDocument, systemPing } from './queues/definitions.js';
+import { createEnqueuer } from './queues/enqueue.js';
 import { createRuntime } from './runtime.js';
 
 const SHUTDOWN_GRACE_MS = 30_000;
@@ -24,12 +29,25 @@ async function main(): Promise<void> {
     logger.warn({ err }, 'redis connection error');
   });
 
+  const pool = createPool({
+    connectionString: config.DATABASE_URL,
+    applicationName: 'opspilot-worker',
+  });
+  const db = createDatabase(pool);
+  const ai = createAiServiceClient({
+    baseUrl: config.AI_SERVICE_URL,
+    token: config.INTERNAL_API_TOKEN,
+  });
+
   const runtime = createRuntime({
     connection,
     logger,
     concurrency: config.WORKER_CONCURRENCY,
-    handlers,
-    definitions: [systemPing],
+    handlers: {
+      ...handlers,
+      [ingestDocument.name]: createIngestionProcessor({ db, ai }) as (typeof handlers)[string],
+    },
+    definitions: [systemPing, ingestDocument],
   });
 
   let running = true;
@@ -41,6 +59,14 @@ async function main(): Promise<void> {
   });
   await health.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT });
   logger.info({ queues: Object.keys(runtime.queues) }, 'worker started');
+
+  // Startup reconciliation, not a startup requirement: a failure here must not
+  // stop the worker from processing everything else.
+  void reconcilePendingIngestion(db, createEnqueuer(runtime.queues), logger).catch(
+    (err: unknown) => {
+      logger.error({ err }, 'ingestion reconciliation failed');
+    },
+  );
 
   let shuttingDown = false;
   const shutdown = (signal: NodeJS.Signals): void => {
@@ -59,6 +85,7 @@ async function main(): Promise<void> {
       try {
         await runtime.close();
         await health.close();
+        await pool.end();
         connection.disconnect();
         process.exit(0);
       } catch (err) {

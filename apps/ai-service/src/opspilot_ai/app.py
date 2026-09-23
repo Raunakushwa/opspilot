@@ -15,6 +15,8 @@ from .config import Settings, get_settings
 from .errors import register_error_handlers
 from .health import DependencyCheck, run_readiness
 from .logging import get_logger, request_id_var
+from .routes import register_retrieval_routes
+from .service import RetrievalService
 
 REQUEST_ID_HEADER = "x-request-id"
 # Same rule as the Node API: accept a caller ID only if it is short and log-safe.
@@ -27,12 +29,16 @@ def create_app(
     settings: Settings | None = None,
     checks: list[DependencyCheck] | None = None,
     on_shutdown: Callable[[], Awaitable[None]] | None = None,
+    retrieval: RetrievalService | None = None,
+    on_startup: Callable[[], Awaitable[None]] | None = None,
 ) -> FastAPI:
     resolved = settings or get_settings()
     dependency_checks = checks if checks is not None else []
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        if on_startup is not None:
+            await on_startup()
         logger.info("ai_service_started", env=resolved.app_env)
         yield
         if on_shutdown is not None:
@@ -67,6 +73,9 @@ def create_app(
     async def healthz() -> dict[str, str]:
         """Liveness: process is up. Never touches dependencies."""
         return {"status": "ok"}
+
+    if retrieval is not None:
+        register_retrieval_routes(app, retrieval, resolved)
 
     @app.get("/readyz")
     async def readyz(response: Response) -> dict[str, object]:

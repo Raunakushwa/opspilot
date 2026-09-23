@@ -26,7 +26,13 @@ export interface EnqueueOptions extends JobsOptions {
  * Validates the payload in the producer, so a malformed job is rejected at the
  * call site with a stack trace instead of failing later inside a worker.
  */
-export function createEnqueuer(queues: QueueRegistry) {
+export type Enqueue = <TSchema extends z.ZodType>(
+  definition: JobDefinition<TSchema>,
+  payload: z.input<TSchema>,
+  options?: EnqueueOptions,
+) => Promise<string>;
+
+export function createEnqueuer(queues: QueueRegistry): Enqueue {
   return async function enqueue<TSchema extends z.ZodType>(
     definition: JobDefinition<TSchema>,
     payload: z.input<TSchema>,

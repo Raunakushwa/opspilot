@@ -17,6 +17,9 @@ const configSchema = z.object({
   WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(4100),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().max(100).default(5),
   READINESS_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  AI_SERVICE_URL: z.url().default('http://ai-service:8000'),
+  INTERNAL_API_TOKEN: z.string().min(16).optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;
