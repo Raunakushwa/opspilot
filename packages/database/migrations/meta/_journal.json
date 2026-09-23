@@ -29,6 +29,20 @@
       "when": 1790109927521,
       "tag": "0003_membership_self_read",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790189136457,
+      "tag": "0004_incidents",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790189149480,
+      "tag": "0005_incident_security",
+      "breakpoints": true
     }
   ]
 }

@@ -14,6 +14,8 @@ import { type DependencyCheck, registerHealthRoutes } from './platform/health.js
 import { registerSessionAuth } from './modules/auth/plugin.js';
 import { registerAuthRoutes } from './modules/auth/routes.js';
 import { type AuthService } from './modules/auth/service.js';
+import { registerIncidentRoutes } from './modules/incidents/routes.js';
+import { type IncidentService } from './modules/incidents/service.js';
 import { registerOrganizationRoutes } from './modules/organizations/routes.js';
 import { type OrganizationService } from './modules/organizations/service.js';
 import { registerOrgContext } from './platform/org-context.js';
@@ -23,6 +25,7 @@ export interface AppDependencies {
   checks: DependencyCheck[];
   auth?: AuthService;
   organizations?: OrganizationService;
+  incidents?: IncidentService;
   /** Database used by the organization-context hook to resolve membership. */
   db?: Database;
   /** Redis client backing the rate limiter; omitted in tests for an in-memory limiter. */
@@ -59,6 +62,7 @@ export async function buildApp({
   checks,
   auth,
   organizations,
+  incidents,
   db,
   rateLimitRedis,
 }: AppDependencies): Promise<FastifyInstance> {
@@ -121,6 +125,10 @@ export async function buildApp({
 
   if (organizations) {
     registerOrganizationRoutes(app, organizations);
+  }
+
+  if (incidents) {
+    registerIncidentRoutes(app, incidents);
   }
 
   return app;

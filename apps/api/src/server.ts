@@ -4,6 +4,8 @@ import { Redis } from 'ioredis';
 import { buildApp } from './app.js';
 import { createAuthRepository } from './modules/auth/repository.js';
 import { createAuthService } from './modules/auth/service.js';
+import { createIncidentRepository } from './modules/incidents/repository.js';
+import { createIncidentService } from './modules/incidents/service.js';
 import { createOrganizationRepository } from './modules/organizations/repository.js';
 import { createOrganizationService } from './modules/organizations/service.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -34,12 +36,14 @@ async function main(): Promise<void> {
   const organizations = createOrganizationService({
     repository: createOrganizationRepository(db),
   });
+  const incidents = createIncidentService(createIncidentRepository(db));
 
   const app = await buildApp({
     config,
     checks: [postgresCheck(pool), redisCheck(redis)],
     auth,
     organizations,
+    incidents,
     db,
     rateLimitRedis: redis,
   });
