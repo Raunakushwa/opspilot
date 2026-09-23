@@ -217,6 +217,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@node-rs/argon2':
+        specifier: 2.2.1
+        version: 2.2.1
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@types/pg@8.23.1)(pg@8.23.0)

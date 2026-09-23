@@ -45,11 +45,20 @@ services:
       args: { APP: database, PKG_DIR: packages/database }
     # Two steps, in order: apply schema changes, then ensure the application
     # login role exists with the configured password.
-    command: ['sh', '-c', 'node dist/cli/migrate.js && node dist/cli/provision.js']
+    command:
+      [
+        'sh',
+        '-c',
+        'node dist/cli/migrate.js && node dist/cli/provision.js && if [ "$$SEED_DEMO" = "true" ]; then node dist/cli/seed.js; fi',
+      ]
     environment:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?}
       APP_DB_USER: ${APP_DB_USER:-opspilot_app}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+      # Seeding runs as the application role, so it exercises the same
+      # row-level security the API does.
+      DATABASE_URL: ${DATABASE_URL:?}
+      SEED_DEMO: ${SEED_DEMO:-true}
     depends_on:
       postgres: { condition: service_healthy }
     restart: 'no'

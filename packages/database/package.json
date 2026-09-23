@@ -25,9 +25,11 @@
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file-if-exists=../../.env src/cli/migrate.ts"
+    "db:migrate": "tsx --env-file-if-exists=../../.env src/cli/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=../../.env src/cli/seed.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "2.2.1",
     "drizzle-orm": "0.45.3",
     "pg": "8.23.0",
     "uuid": "14.0.2"
