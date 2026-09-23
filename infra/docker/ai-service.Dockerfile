@@ -16,6 +16,11 @@ RUN uv sync --frozen --no-dev
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH=/app/.venv/bin:$PATH
 RUN useradd --create-home --uid 10001 opspilot
+# The model cache is a mounted volume; Docker copies this directory's ownership
+# to the volume on first use, so it must exist and belong to the app user.
+RUN mkdir -p /home/opspilot/.cache && chown -R opspilot:opspilot /home/opspilot
+ENV HF_HOME=/home/opspilot/.cache/huggingface \
+    FASTEMBED_CACHE_PATH=/home/opspilot/.cache/fastembed
 WORKDIR /app
 COPY --from=builder --chown=opspilot:opspilot /app /app
 USER opspilot

@@ -37,3 +37,12 @@ describe('toDeadLetterRecord', () => {
     expect(record.failedReason).toHaveLength(2000);
   });
 });
+
+describe('dead-letter job ids', () => {
+  it('avoids the colon, which BullMQ rejects in custom job ids', () => {
+    const record = toDeadLetterRecord(fakeJob(), new Error('boom'));
+
+    const jobId = `${record.queue}-${record.jobId}-${String(record.attemptsMade)}`;
+    expect(jobId).not.toContain(':');
+  });
+});

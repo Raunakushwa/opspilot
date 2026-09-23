@@ -153,9 +153,15 @@ importers:
 
   apps/worker:
     dependencies:
+      '@opspilot/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       bullmq:
         specifier: 6.3.8
         version: 6.3.8(ioredis@6.0.0)(pg@8.23.0)
+      drizzle-orm:
+        specifier: 0.45.3
+        version: 0.45.3(@types/pg@8.23.1)(pg@8.23.0)
       fastify:
         specifier: 5.12.5
         version: 5.12.5

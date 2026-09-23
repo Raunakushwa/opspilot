@@ -56,3 +56,20 @@ export const systemPing = defineJob({
 });
 
 export type SystemPingPayload = z.infer<typeof systemPing.schema>;
+
+/** Index one document version into the vector store. */
+export const ingestDocument = defineJob({
+  name: 'document.ingest',
+  queue: QueueName.Ingestion,
+  schema: z.object({
+    organizationId: z.uuid(),
+    documentVersionId: z.uuid(),
+  }),
+  options: {
+    // Embedding is expensive; fewer attempts, longer backoff than the default.
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+  },
+});
+
+export type IngestDocumentPayload = z.infer<typeof ingestDocument.schema>;

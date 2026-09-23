@@ -40,7 +40,8 @@ export async function recordDeadLetter(
     // Dead letters are the audit trail of automation failure: keep them all.
     removeOnComplete: false,
     removeOnFail: false,
-    jobId: `${record.queue}:${record.jobId}:${String(record.attemptsMade)}`,
+    // BullMQ rejects ':' in custom job ids (it is its key separator).
+    jobId: `${record.queue}-${record.jobId}-${String(record.attemptsMade)}`,
   });
 }
 
