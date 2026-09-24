@@ -1,0 +1,57 @@
+{
+  "name": "acme-retrieval-v1",
+  "description": "Questions an on-call engineer would ask during the seeded payment-service incident. Expected documents are the ones a competent responder would want; retrieval is scored on whether it surfaces them.",
+  "cases": [
+    {
+      "id": "rollback-procedure",
+      "question": "What is the rollback procedure for payment-service?",
+      "expected_documents": ["Runbook: rolling back payment-service"],
+      "expected_answer": "Identify the current and previous release, announce in the incident channel, run the rollback command, then watch the error rate for five minutes."
+    },
+    {
+      "id": "previous-pool-incident",
+      "question": "Has payment-service had a connection pool problem before?",
+      "expected_documents": ["Postmortem: INC-88 payment-service connection pool exhaustion"],
+      "expected_answer": "Yes — INC-88, where a deploy reduced the per-pod pool and requests timed out acquiring connections at peak."
+    },
+    {
+      "id": "pool-sizing",
+      "question": "How should the payment-service connection pool be sized?",
+      "expected_documents": ["Architecture: payment-service"],
+      "expected_answer": "Total connections are pods multiplied by pool size and must stay below max_connections with headroom; pools below 10 per pod have caused acquisition timeouts at peak."
+    },
+    {
+      "id": "redis-failover",
+      "question": "Which runbook covers Redis session store failures?",
+      "expected_documents": ["Runbook: auth-service session store failover"],
+      "expected_answer": "The auth-service session store failover runbook: confirm the primary is down, promote the replica, and never flush the store."
+    },
+    {
+      "id": "first-fifteen-minutes",
+      "question": "What should I check first when a service starts returning 5xx?",
+      "expected_documents": ["Troubleshooting: elevated 5xx on a service"],
+      "expected_answer": "Whether anything shipped recently, what the dominant error message is, which metric moved first, and whether dependencies are healthy — mitigate before diagnosing."
+    },
+    {
+      "id": "migration-during-incident",
+      "question": "Can I run a database migration to fix a live incident?",
+      "expected_documents": ["Runbook: database migrations during an incident"],
+      "expected_answer": "Only if it is the only mitigation and the database on-call agrees; a rollback does not revert migrations."
+    },
+    {
+      "id": "notification-backlog",
+      "question": "Why did notifications get delayed after the batching change?",
+      "expected_documents": ["Postmortem: INC-102 notification backlog"],
+      "expected_answer": "Batch size was tuned for throughput without checking the slowest consumer, so the queue grew faster than it drained."
+    },
+    {
+      "id": "error-signature",
+      "question": "What does 'timeout acquiring connection from pool' mean?",
+      "expected_documents": [
+        "Postmortem: INC-88 payment-service connection pool exhaustion",
+        "Architecture: payment-service"
+      ],
+      "expected_answer": "Requests queued for a database connection and exceeded the acquisition timeout, usually because the pool is too small for peak concurrency."
+    }
+  ]
+}
