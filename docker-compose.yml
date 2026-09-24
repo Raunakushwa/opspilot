@@ -114,6 +114,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:?}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-}
+      INTERNAL_JWT_SECRET: ${INTERNAL_JWT_SECRET:-}
+      TOOL_GATEWAY_URL: ${TOOL_GATEWAY_URL:-http://api:4001}
+      DELEGATION_TTL_SECONDS: ${DELEGATION_TTL_SECONDS:-900}
     ports: ['${WORKER_HOST_PORT:-4100}:4100']
     depends_on:
       redis: { condition: service_healthy }
@@ -146,6 +149,8 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      TOOL_GATEWAY_URL: ${TOOL_GATEWAY_URL:-http://api:4001}
     ports: ['${AI_SERVICE_HOST_PORT:-8000}:8000']
     depends_on: [qdrant]
     # Embedding models are downloaded once and cached across restarts.

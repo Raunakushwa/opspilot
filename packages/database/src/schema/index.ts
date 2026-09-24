@@ -1,5 +1,6 @@
 export * from './columns.js';
 export * from './identity.js';
+export * from './ai.js';
 export * from './incidents.js';
 export * from './knowledge.js';
 export * from './org.js';

@@ -1,9 +1,13 @@
 import { createDatabase, createPool } from '@opspilot/database';
+import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { buildApp } from './app.js';
 import { createAuthRepository } from './modules/auth/repository.js';
 import { createAuthService } from './modules/auth/service.js';
+import { createAiRepository } from './modules/ai/repository.js';
+import { createActionRegistry, createSimulatedDeployAdapter } from './modules/ai/executor.js';
+import { createAiService } from './modules/ai/service.js';
 import { createIncidentRepository } from './modules/incidents/repository.js';
 import { createIncidentService } from './modules/incidents/service.js';
 import { createOrganizationRepository } from './modules/organizations/repository.js';
@@ -39,12 +43,31 @@ async function main(): Promise<void> {
   });
   const incidents = createIncidentService(createIncidentRepository(db));
 
+  // Producing the job here keeps the API stateless: the run outlives the
+  // request, and the worker owns its execution.
+  const investigationQueue = new Queue('ai', { connection: redis });
+  const ai = createAiService({
+    repository: createAiRepository(db),
+    incidents,
+    actions: createActionRegistry({ incidents, deploy: createSimulatedDeployAdapter() }),
+    enqueue: async (input) => {
+      await investigationQueue.add(
+        'ai.investigate',
+        input,
+        // One job per run: a duplicate enqueue cannot start a second
+        // investigation (and a second charge) for the same run.
+        { jobId: `investigate-${input.runId}`, attempts: 2 },
+      );
+    },
+  });
+
   const app = await buildApp({
     config,
     checks: [postgresCheck(pool), redisCheck(redis)],
     auth,
     organizations,
     incidents,
+    ai: { service: ai, redis },
     db,
     rateLimitRedis: redis,
   });
@@ -64,6 +87,7 @@ async function main(): Promise<void> {
   });
 
   app.addHook('onClose', async () => {
+    await investigationQueue.close();
     redis.disconnect();
     await pool.end();
   });

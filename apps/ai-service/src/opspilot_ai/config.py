@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     # must never be reachable without it.
     internal_api_token: str | None = None
 
+    # Progress events are published to a Redis stream the API tails for SSE.
+    redis_url: str = "redis://redis:6379"
+    #: Where the agent calls back for tenant data (the API's tool gateway).
+    tool_gateway_url: str = "http://api:4001"
+
 
 class ConfigError(Exception):
     """Configuration is invalid; the message names fields but never their values."""

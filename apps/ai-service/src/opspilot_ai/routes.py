@@ -9,6 +9,11 @@ from collections.abc import Awaitable, Callable
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 from .config import Settings
+from .investigations import (
+    InvestigationRunner,
+    RunInvestigationRequest,
+    RunInvestigationResponse,
+)
 from .retrieval.models import SearchResult
 from .service import IndexRequest, IndexResponse, RetrievalService, SearchRequest
 
@@ -29,7 +34,10 @@ def _authorize(settings: Settings) -> Callable[[str | None], Awaitable[None]]:
 
 
 def register_retrieval_routes(
-    app: FastAPI, retrieval: RetrievalService, settings: Settings
+    app: FastAPI,
+    retrieval: RetrievalService,
+    settings: Settings,
+    investigations: InvestigationRunner | None = None,
 ) -> None:
     guard = Depends(_authorize(settings))
 
@@ -40,3 +48,11 @@ def register_retrieval_routes(
     @app.post("/internal/search", dependencies=[guard])
     async def search(request: SearchRequest) -> SearchResult:
         return await retrieval.search(request)
+
+    if investigations is not None:
+
+        @app.post("/internal/investigations/run", dependencies=[guard])
+        async def run_investigation_route(
+            request: RunInvestigationRequest,
+        ) -> RunInvestigationResponse:
+            return await investigations.run(request)
