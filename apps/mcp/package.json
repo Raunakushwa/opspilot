@@ -4,7 +4,9 @@
   "private": true,
   "description": "MCP server exposing OpsPilot's read tools to general-purpose agents",
   "type": "module",
-  "bin": { "opspilot-mcp": "./dist/server.js" },
+  "bin": {
+    "opspilot-mcp": "./dist/server.js"
+  },
   "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc -p tsconfig.build.json",
