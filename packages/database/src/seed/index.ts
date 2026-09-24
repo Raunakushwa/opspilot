@@ -26,7 +26,7 @@ import {
   DEPLOYMENTS,
   DOCUMENTS,
   HISTORICAL_INCIDENTS,
-  INCIDENT_START,
+  incidentStart,
   SERVICES,
   USERS,
 } from './scenario.js';
@@ -63,6 +63,7 @@ export interface SeedResult {
  */
 export async function seed(db: Database): Promise<SeedResult> {
   const passwordHash = await hash(DEMO_PASSWORD, ARGON2);
+  const INCIDENT_START = incidentStart();
 
   await withoutTenant(db, async (tx) => {
     await tx

@@ -81,6 +81,9 @@ services:
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
       RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1 minute}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-5}
+      INTERNAL_JWT_SECRET: ${INTERNAL_JWT_SECRET:-}
+      INTERNAL_PORT: 4001
+      DELEGATION_TTL_SECONDS: ${DELEGATION_TTL_SECONDS:-900}
     ports: ['${API_HOST_PORT:-4000}:4000']
     depends_on:
       postgres: { condition: service_healthy }

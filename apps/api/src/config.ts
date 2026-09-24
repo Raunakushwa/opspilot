@@ -38,6 +38,11 @@ const configSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().default('1 minute'),
   /** Credential endpoints get a much tighter budget than ordinary routes. */
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  /** Signs the short-lived delegation tokens the agent uses to read data. */
+  INTERNAL_JWT_SECRET: z.string().min(32).optional(),
+  INTERNAL_PORT: z.coerce.number().int().min(1).max(65535).default(4001),
+  /** Delegation tokens outlive a single tool call but not an investigation. */
+  DELEGATION_TTL_SECONDS: z.coerce.number().int().positive().max(3600).default(900),
 });
 
 export type Config = z.infer<typeof configSchema>;

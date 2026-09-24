@@ -9,7 +9,14 @@
  * citations.
  */
 
-export const INCIDENT_START = new Date('2026-09-20T09:18:00Z');
+/**
+ * The scenario is anchored to the moment of seeding, not to a fixed date: a
+ * demo where the incident started "45 minutes ago" stays believable, and the
+ * default tool windows (hours, not months) keep finding the evidence.
+ */
+export function incidentStart(now: Date = new Date()): Date {
+  return new Date(now.getTime() - 45 * 60_000);
+}
 
 export interface SeedService {
   slug: string;
