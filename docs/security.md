@@ -22,21 +22,23 @@ a control that does not exist.
 | Package versions younger than 24h refused (`minimumReleaseAge`) — most malicious npm releases are caught within hours                    | `pnpm-workspace.yaml`                         |
 | Secret scanning on commit (gitleaks) and Dependabot updates                                                                              | tooling, `.github`                            |
 
-## Phase 2 — authentication and authorization
+## Implemented — authentication and authorization
 
 argon2id password hashing; opaque session tokens stored hashed, delivered in
-`httpOnly; Secure; SameSite=Lax` cookies (ADR-008); CSRF defence via same-site
-cookies plus a custom-header requirement; rate limiting on authentication
-endpoints keyed by IP **and** account; RBAC enforced server-side in a policy
-layer with an exhaustive test matrix; row-level security policies (ADR-009).
+`httpOnly; Secure; SameSite=Lax` cookies (ADR-008); rate limiting on credential
+endpoints keyed by IP **and** account; RBAC enforced server-side in one
+reviewable matrix with an exhaustive test; row-level security on every tenant
+table (ADR-009). Login is indistinguishable between an unknown address and a
+wrong password, in both response _and_ timing.
 
-## Phase 3+ — audit and data integrity
+## Implemented — audit and data integrity
 
-Append-only `audit_logs` (privileges plus a trigger rejecting `UPDATE`/`DELETE`);
-optimistic concurrency so a stale write fails rather than overwrites;
-cross-tenant references made unstorable by composite foreign keys.
+Append-only `audit_logs`: `UPDATE`/`DELETE` revoked from the application role
+_and_ refused by a trigger. Optimistic concurrency (`If-Match`) so a stale write
+fails rather than overwrites. Cross-tenant references made unstorable by
+composite foreign keys.
 
-## Phase 7+ — AI-specific controls
+## Implemented — AI-specific controls
 
 - **Least privilege for tools**: the agent reads through the API's Tool Gateway
   with a short-lived delegation token scoped to (user, organization, run); the
@@ -54,9 +56,14 @@ cross-tenant references made unstorable by composite foreign keys.
 
 ## Known gaps
 
-- No authentication exists yet, so the API is currently unauthenticated by
-  design; it is not exposed anywhere public.
-- Rate limiting is designed but not implemented.
-- Dependency and container image scanning in CI is planned, not present.
+- **Dependency and container image scanning in CI** is not present.
+- **No commit-time secret scanning** (gitleaks or equivalent); `.env` being
+  git-ignored is the only current protection.
+- **CSRF relies on `SameSite=Lax` alone** today; the custom-header requirement
+  described above is designed but not enforced.
+- **Notification delivery** (email, webhooks) is unimplemented, so no outbound
+  webhook signing exists yet.
+- **The demo deploy adapter is simulated**: an approved rollback is recorded
+  and audited, not performed. The response says so.
 - No commit-time secret scanning yet (e.g. gitleaks in a pre-commit hook or a
   CI job); `.env` being git-ignored is the only current protection.

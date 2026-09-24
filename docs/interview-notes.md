@@ -39,7 +39,7 @@ convincing than pretending otherwise.
 - **A migration blocking production** — `lock_timeout` makes it fail instead of
   queueing behind a long query while blocking the table.
 
-## Things that actually broke during Phase 1
+## Things that actually broke while building this
 
 Worth telling, because they are the kind of bug that does not show up in a demo.
 
@@ -64,6 +64,31 @@ Worth telling, because they are the kind of bug that does not show up in a demo.
 6. **DO blocks cannot take bind parameters**, so the first role-provisioning
    implementation failed. PostgreSQL now builds the statement with
    `format('%I','%L')` — quoting is the database's job.
+7. **Rate limiting silently did nothing per-account.** The limiter ran on
+   `onRequest`, _before_ the body was parsed, so the email was always undefined
+   and the key fell back to IP-only — meaning one attacked account would lock
+   out everyone behind the same NAT. A test asserting "a different account from
+   the same address still works" failed with 429 and exposed it.
+8. **A fabricated password hash.** I wrote the demo credential's argon2 digest
+   as a literal; it verified against nothing, so every demo login failed.
+   Hashing at seed time fixed it, and re-seeding now _upserts_ credentials,
+   because the rows could not be deleted (incidents reference their author) and
+   a stale hash silently breaks every demo login.
+9. **BullMQ rejects `:` in custom job ids.** Startup reconciliation failed
+   silently with `Custom Id cannot contain :`, and the same latent bug sat in
+   the dead-letter path.
+10. **A Redis subscriber that never connected.** The realtime hub duplicated the
+    API's client, inheriting `enableOfflineQueue: false` — right for
+    request-path commands (fail fast when Redis is down) and wrong for a
+    long-lived subscriber. Real-time returned 500 until it was given its own
+    settings.
+11. **Incidents listed in an arbitrary order.** Pagination keyed on the id,
+    which is time-ordered for UUIDv7 but _not_ for the deterministic ids the
+    seed generates — so the open SEV1 incident sat in the middle of the list.
+    Now ordered by `(created_at, id)` with an opaque cursor.
+12. **A container that could not write its own cache.** The embedding model
+    volume inherited root ownership, so the AI service crash-looped with
+    `Permission denied` on first model download.
 
 ## Testing philosophy
 
@@ -75,6 +100,16 @@ Worth telling, because they are the kind of bug that does not show up in a demo.
   failed. A test that has never failed has not been shown to work.
 - CI ends with a full-stack smoke test, because the failures that reach
   production are usually wiring failures, not logic failures.
+
+## Measured, not asserted
+
+The evaluation harness exists so retrieval quality is a number. At k=4 on the
+demo corpus, hybrid retrieval scores recall 1.0 / MRR 1.0, while vector-only
+scores 0.94 and **misses** the architecture document for _"what does 'timeout
+acquiring connection from pool' mean?"_ — a near-exact token match that
+embeddings blur. That is the case ADR-004 predicted, demonstrated rather than
+argued. Keyword-only also scores 1.0 on a corpus this small, and I do not claim
+more than eight questions can support.
 
 ## What I would do differently at 100× scale
 
@@ -89,8 +124,16 @@ Worth telling, because they are the kind of bug that does not show up in a demo.
 
 ## What is not claimed
 
-No load testing has been done, so no throughput or latency numbers are quoted.
-No RAG benchmark numbers exist until the evaluation harness runs (Phase 6), and
-they will be reported with the model, dataset and commit that produced them.
-The logs, metrics and deployments the copilot inspects are seeded tables, not a
-live observability stack (ADR-010).
+- **No load testing has been done**, so no throughput or latency numbers are
+  quoted, and no claim is made about how this behaves under concurrency beyond
+  the specific races that have tests (incident numbering, proposal approval,
+  concurrent migrations).
+- **Retrieval numbers are from eight questions over seven documents.** They are
+  real and reproducible, and they are not a benchmark.
+- **Generation quality is unmeasured.** Faithfulness and answer relevance need
+  a judge model; the harness reports retrieval only and never averages the two.
+- **The logs, metrics and deployments are seeded tables**, not a live
+  observability stack (ADR-010).
+- **An approved rollback is recorded, not performed.** No deployment system is
+  connected, and the execution result says so in plain words.
+- **Terraform and a live AWS deployment do not exist yet.**

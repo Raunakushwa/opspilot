@@ -4,9 +4,10 @@ OpsPilot is a multi-tenant incident management platform with an AI copilot that
 investigates incidents, cites its evidence, and proposes remediation that a
 human approves before anything is executed.
 
-This document describes the target architecture and marks what exists today.
-Phase 1 (foundations) is complete; everything labelled **planned** has an
-agreed design but no implementation yet.
+This document describes the architecture and marks what exists today. The
+system runs end to end: sign in, open an incident, investigate it with the
+agent, approve a proposed action, and watch the timeline and audit log update
+in real time.
 
 ## 1. System topology
 
@@ -81,25 +82,29 @@ These are the rules the rest of the design depends on.
    code rather than trusted from the model. Sources that were not inspected are
    reported as not inspected.
 
-## 4. What exists today (Phase 1)
+## 4. What exists today
 
-| Capability                                                                                                        | Where                                        | Status  |
-| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------- |
-| Fastify API, config validation, request IDs, problem+json errors, security headers, graceful shutdown             | `apps/api`                                   | built   |
-| Liveness/readiness split (`/healthz`, `/readyz`, `/api/status`)                                                   | `apps/api`, `apps/worker`, `apps/ai-service` | built   |
-| BullMQ runtime: queues per failure domain, retries with backoff, dead-letter queue, idempotent job IDs            | `apps/worker`                                | built   |
-| Database package: Drizzle client, SQL migrations, advisory-locked migration runner, application role provisioning | `packages/database`                          | built   |
-| FastAPI service, structlog JSON logging, Qdrant readiness                                                         | `apps/ai-service`                            | built   |
-| Next.js shell, design system, TanStack Query, typed API client                                                    | `apps/web`                                   | built   |
-| Docker Compose stack with migration gating and non-root images                                                    | `infra/docker`, `docker-compose.yml`         | built   |
-| CI: lint, typecheck, unit, integration, full-stack smoke test                                                     | `.github/workflows/ci.yml`                   | built   |
-| Authentication, organizations, RBAC, domain schema                                                                | —                                            | Phase 2 |
-| Incidents, comments, timeline, audit log                                                                          | —                                            | Phase 3 |
-| AI investigation vertical slice                                                                                   | —                                            | Phase 4 |
-| Real-time, notifications                                                                                          | —                                            | Phase 5 |
-| Knowledge base, hybrid retrieval, reranking, evaluation                                                           | —                                            | Phase 6 |
-| LangGraph agent, guardrails, observability, cost tracking                                                         | —                                            | Phase 7 |
-| MCP server, Terraform/AWS, deployment                                                                             | —                                            | Phase 8 |
+| Capability                                                                                     | Where                                 | Status              |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------- |
+| Fastify API: config validation, request ids, problem+json, security headers, graceful shutdown | `apps/api`                            | built               |
+| Authentication: argon2id, opaque sessions, rate limiting keyed by IP and account               | `apps/api`                            | built               |
+| Organizations, membership, 16-permission RBAC matrix                                           | `apps/api`                            | built               |
+| Tenant isolation: path scoping, row-level security, composite foreign keys                     | `packages/database`                   | built               |
+| Incidents, timeline events, append-only audit log, transactional outbox                        | `apps/api`                            | built               |
+| Real-time: outbox relay → Redis → SSE fan-out → UI refresh                                     | `apps/worker`, `apps/api`, `apps/web` | built               |
+| Knowledge base: versioned documents, chunking, dense + sparse indexing                         | `apps/ai-service`, `apps/worker`      | built               |
+| Hybrid retrieval with RRF fusion and cross-encoder reranking                                   | `apps/ai-service`                     | built               |
+| LLM provider abstraction (OpenAI-compatible + deterministic fake)                              | `apps/ai-service`                     | built               |
+| LangGraph investigation agent with enforced provenance                                         | `apps/ai-service`                     | built               |
+| Tool gateway: eight read-only tools, scoped delegation tokens                                  | `apps/api`                            | built               |
+| Human approval: proposals, per-action permissions, execution, audit                            | `apps/api`                            | built               |
+| Web: login, incident list and detail, AI panel, approvals, audit log                           | `apps/web`                            | built               |
+| Retrieval evaluation harness with reproducible metrics                                         | `apps/ai-service`, `eval/`            | built               |
+| MCP server exposing the read tools to general agents                                           | `apps/mcp`                            | built               |
+| Docker Compose stack, seeded demo, CI (4 jobs)                                                 | repo                                  | built               |
+| Notifications (email/webhook delivery)                                                         | —                                     | designed, not built |
+| Generation-quality evaluation (judge model)                                                    | —                                     | designed, not built |
+| Terraform / AWS deployment                                                                     | —                                     | designed, not built |
 
 ## 5. Request paths
 
