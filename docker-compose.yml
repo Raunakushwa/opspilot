@@ -148,7 +148,7 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-openai-compatible}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
       LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       TOOL_GATEWAY_URL: ${TOOL_GATEWAY_URL:-http://api:4001}
     ports: ['${AI_SERVICE_HOST_PORT:-8000}:8000']

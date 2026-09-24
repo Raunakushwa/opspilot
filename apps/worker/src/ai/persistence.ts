@@ -34,7 +34,7 @@ export interface CompleteRunInput {
     rationale: string;
     evidenceIds: string[];
   }[];
-  estimatedCostUsd: number;
+  estimatedCostUsd: number | null;
 }
 
 interface ToolCallTelemetry {
@@ -94,7 +94,7 @@ export function createRunPersistence(db: Database) {
           promptVersion: text(telemetry.promptVersion),
           inputTokens: count(telemetry.inputTokens),
           outputTokens: count(telemetry.outputTokens),
-          estimatedCostUsd: input.estimatedCostUsd.toFixed(6),
+          estimatedCostUsd: input.estimatedCostUsd?.toFixed(6) ?? null,
           latencyMs: count(telemetry.latencyMs),
         });
 
