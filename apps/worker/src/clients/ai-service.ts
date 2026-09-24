@@ -72,6 +72,24 @@ export function createAiServiceClient({
   };
 
   return {
+    /** Runs one investigation. Long timeout: the agent makes several LLM calls. */
+    runInvestigation: async (input: {
+      runId: string;
+      organizationId: string;
+      userId: string;
+      question: string;
+      incident: Record<string, unknown>;
+      delegationToken: string;
+    }): Promise<{ result: Record<string, unknown>; telemetry: Record<string, unknown> }> =>
+      request('/internal/investigations/run', {
+        run_id: input.runId,
+        organization_id: input.organizationId,
+        user_id: input.userId,
+        question: input.question,
+        incident: input.incident,
+        delegation_token: input.delegationToken,
+      }),
+
     indexDocumentVersion: async (input: IndexDocumentInput): Promise<IndexDocumentResult> => {
       const result = await request<{ chunks_indexed: number; took_ms: number }>(
         '/internal/index/document-versions',

@@ -73,3 +73,24 @@ export const ingestDocument = defineJob({
 });
 
 export type IngestDocumentPayload = z.infer<typeof ingestDocument.schema>;
+
+/** Run one AI investigation. */
+export const runInvestigation = defineJob({
+  name: 'ai.investigate',
+  queue: QueueName.Ai,
+  schema: z.object({
+    organizationId: z.uuid(),
+    runId: z.uuid(),
+    incidentId: z.uuid(),
+    userId: z.uuid(),
+    question: z.string().min(3).max(1000),
+  }),
+  options: {
+    // Investigations cost money and are not idempotent from the user's point
+    // of view: one retry for a transient failure, no more.
+    attempts: 2,
+    backoff: { type: 'fixed', delay: 3000 },
+  },
+});
+
+export type RunInvestigationPayload = z.infer<typeof runInvestigation.schema>;

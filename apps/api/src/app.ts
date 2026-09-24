@@ -7,6 +7,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController } from 'fastify';
 
 import { type Database } from '@opspilot/database';
+import { type Redis } from 'ioredis';
 
 import { type Config } from './config.js';
 import { registerErrorHandlers } from './platform/errors.js';
@@ -14,6 +15,8 @@ import { type DependencyCheck, registerHealthRoutes } from './platform/health.js
 import { registerSessionAuth } from './modules/auth/plugin.js';
 import { registerAuthRoutes } from './modules/auth/routes.js';
 import { type AuthService } from './modules/auth/service.js';
+import { registerAiRoutes } from './modules/ai/routes.js';
+import { type AiOrchestrationService } from './modules/ai/service.js';
 import { registerIncidentRoutes } from './modules/incidents/routes.js';
 import { type IncidentService } from './modules/incidents/service.js';
 import { registerOrganizationRoutes } from './modules/organizations/routes.js';
@@ -26,6 +29,7 @@ export interface AppDependencies {
   auth?: AuthService;
   organizations?: OrganizationService;
   incidents?: IncidentService;
+  ai?: { service: AiOrchestrationService; redis: Redis };
   /** Database used by the organization-context hook to resolve membership. */
   db?: Database;
   /** Redis client backing the rate limiter; omitted in tests for an in-memory limiter. */
@@ -63,6 +67,7 @@ export async function buildApp({
   auth,
   organizations,
   incidents,
+  ai,
   db,
   rateLimitRedis,
 }: AppDependencies): Promise<FastifyInstance> {
@@ -129,6 +134,10 @@ export async function buildApp({
 
   if (incidents) {
     registerIncidentRoutes(app, incidents);
+  }
+
+  if (ai) {
+    registerAiRoutes(app, { service: ai.service, redis: ai.redis });
   }
 
   return app;

@@ -3,7 +3,11 @@
 from .app import create_app
 from .clients.qdrant import create_qdrant_client, qdrant_check
 from .config import get_settings
+from .investigations import InvestigationRunner
+from .llm.fake import FakeLLMProvider
+from .llm.openai_compat import OpenAICompatibleProvider
 from .logging import configure_logging, get_logger
+from .progress import NullProgressPublisher, RedisProgressPublisher
 from .retrieval.embeddings import create_embedder
 from .retrieval.rerank import create_reranker
 from .retrieval.store import QdrantSearchProvider
@@ -26,6 +30,38 @@ _provider = QdrantSearchProvider(
 )
 
 
+def _create_llm() -> object:
+    if settings.llm_provider == "fake":
+        return FakeLLMProvider([])
+    return OpenAICompatibleProvider(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+        model=settings.llm_model,
+        name="openai-compatible",
+        supports_json_schema=settings.llm_supports_json_schema,
+    )
+
+
+def _create_progress() -> RedisProgressPublisher | NullProgressPublisher:
+    try:
+        import redis.asyncio as redis
+
+        client: redis.Redis = redis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
+        return RedisProgressPublisher(client)
+    except Exception:  # pragma: no cover - configuration problem
+        logger.warning("progress_disabled", reason="redis unavailable")
+        return NullProgressPublisher()
+
+
+_retrieval = RetrievalService(_provider)
+_investigations = InvestigationRunner(
+    settings=settings,
+    llm=_create_llm(),  # type: ignore[arg-type]
+    retrieval=_retrieval,
+    progress=_create_progress(),
+)
+
+
 async def _prepare() -> None:
     await _provider.ensure_collection()
 
@@ -34,6 +70,7 @@ app = create_app(
     settings=settings,
     checks=[qdrant_check(_qdrant)],
     on_shutdown=_qdrant.close,
-    retrieval=RetrievalService(_provider),
+    retrieval=_retrieval,
+    investigations=_investigations,
     on_startup=_prepare,
 )

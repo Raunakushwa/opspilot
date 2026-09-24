@@ -20,6 +20,10 @@ const configSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   AI_SERVICE_URL: z.url().default('http://ai-service:8000'),
   INTERNAL_API_TOKEN: z.string().min(16).optional(),
+  /** Same secret the API uses to verify delegation tokens. */
+  INTERNAL_JWT_SECRET: z.string().min(32).optional(),
+  TOOL_GATEWAY_URL: z.url().default('http://api:4001'),
+  DELEGATION_TTL_SECONDS: z.coerce.number().int().positive().max(3600).default(900),
 });
 
 export type Config = z.infer<typeof configSchema>;

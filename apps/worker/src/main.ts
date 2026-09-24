@@ -5,10 +5,15 @@ import { pino } from 'pino';
 import { createAiServiceClient } from './clients/ai-service.js';
 import { ConfigError, loadConfig } from './config.js';
 import { createHealthServer } from './health.js';
+import { SignJWT } from 'jose';
+
+import { createRunPersistence } from './ai/persistence.js';
+import { estimateCostUsd } from './pricing.js';
 import { createIngestionProcessor } from './processors/ingestion.js';
+import { createInvestigationProcessor } from './processors/investigation.js';
 import { handlers } from './processors/index.js';
 import { reconcilePendingIngestion } from './processors/reconcile.js';
-import { ingestDocument, systemPing } from './queues/definitions.js';
+import { ingestDocument, runInvestigation, systemPing } from './queues/definitions.js';
 import { createEnqueuer } from './queues/enqueue.js';
 import { createRuntime } from './runtime.js';
 
@@ -39,6 +44,27 @@ async function main(): Promise<void> {
     token: config.INTERNAL_API_TOKEN,
   });
 
+  // Minting here, not in the API: the token must live exactly as long as the
+  // run, and the worker is what knows when the run starts.
+  const mintToken = async (claims: {
+    userId: string;
+    organizationId: string;
+    runId: string;
+  }): Promise<string> => {
+    const secret = config.INTERNAL_JWT_SECRET;
+    if (!secret) {
+      throw new Error('INTERNAL_JWT_SECRET is required to run investigations');
+    }
+    return new SignJWT({ org: claims.organizationId, run: claims.runId, scope: 'tools:read' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(claims.userId)
+      .setIssuer('opspilot-api')
+      .setAudience('opspilot-tool-gateway')
+      .setIssuedAt()
+      .setExpirationTime(`${String(config.DELEGATION_TTL_SECONDS)}s`)
+      .sign(new TextEncoder().encode(secret));
+  };
+
   const runtime = createRuntime({
     connection,
     logger,
@@ -46,8 +72,15 @@ async function main(): Promise<void> {
     handlers: {
       ...handlers,
       [ingestDocument.name]: createIngestionProcessor({ db, ai }) as (typeof handlers)[string],
+      [runInvestigation.name]: createInvestigationProcessor({
+        db,
+        ai,
+        mintToken,
+        persist: createRunPersistence(db),
+        estimateCost: estimateCostUsd,
+      }) as (typeof handlers)[string],
     },
-    definitions: [systemPing, ingestDocument],
+    definitions: [systemPing, ingestDocument, runInvestigation],
   });
 
   let running = true;

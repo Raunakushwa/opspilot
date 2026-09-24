@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request, Response
 from .config import Settings, get_settings
 from .errors import register_error_handlers
 from .health import DependencyCheck, run_readiness
+from .investigations import InvestigationRunner
 from .logging import get_logger, request_id_var
 from .routes import register_retrieval_routes
 from .service import RetrievalService
@@ -30,6 +31,7 @@ def create_app(
     checks: list[DependencyCheck] | None = None,
     on_shutdown: Callable[[], Awaitable[None]] | None = None,
     retrieval: RetrievalService | None = None,
+    investigations: InvestigationRunner | None = None,
     on_startup: Callable[[], Awaitable[None]] | None = None,
 ) -> FastAPI:
     resolved = settings or get_settings()
@@ -75,7 +77,7 @@ def create_app(
         return {"status": "ok"}
 
     if retrieval is not None:
-        register_retrieval_routes(app, retrieval, resolved)
+        register_retrieval_routes(app, retrieval, resolved, investigations)
 
     @app.get("/readyz")
     async def readyz(response: Response) -> dict[str, object]:
