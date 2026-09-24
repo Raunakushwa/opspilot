@@ -11,6 +11,7 @@ import { createRunPersistence } from './ai/persistence.js';
 import { estimateCostUsd } from './pricing.js';
 import { createIngestionProcessor } from './processors/ingestion.js';
 import { createInvestigationProcessor } from './processors/investigation.js';
+import { createOutboxRelay } from './processors/outbox-relay.js';
 import { handlers } from './processors/index.js';
 import { reconcilePendingIngestion } from './processors/reconcile.js';
 import { ingestDocument, runInvestigation, systemPing } from './queues/definitions.js';
@@ -101,6 +102,13 @@ async function main(): Promise<void> {
     },
   );
 
+  // A separate connection: the relay publishes while BullMQ's connection is
+  // busy blocking on queue reads.
+  const publisher = connection.duplicate();
+  const relay = createOutboxRelay({ db, redis: publisher, logger });
+  relay.start();
+  logger.info('outbox relay started');
+
   let shuttingDown = false;
   const shutdown = (signal: NodeJS.Signals): void => {
     if (shuttingDown) return;
@@ -116,9 +124,11 @@ async function main(): Promise<void> {
 
     void (async () => {
       try {
+        relay.stop();
         await runtime.close();
         await health.close();
         await pool.end();
+        publisher.disconnect();
         connection.disconnect();
         process.exit(0);
       } catch (err) {

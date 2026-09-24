@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 
 import { useLogout, useMe } from '@/hooks/api';
+import { useRealtime } from '@/hooks/use-realtime';
 import { useSessionStore } from '@/stores/session';
 
 const NAV = [
@@ -18,6 +19,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const me = useMe();
   const logout = useLogout();
   const { organizationId, setOrganization, resolve } = useSessionStore();
+
+  // One subscription for the whole app: incident and AI events refresh the
+  // pages that show them, so nothing here polls.
+  useRealtime(organizationId);
 
   // Memoised so the effect below does not re-run on every render.
   const memberships = useMemo(() => me.data?.memberships ?? [], [me.data]);

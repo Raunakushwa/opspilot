@@ -22,6 +22,8 @@ import { type IncidentService } from './modules/incidents/service.js';
 import { registerOrganizationRoutes } from './modules/organizations/routes.js';
 import { type OrganizationService } from './modules/organizations/service.js';
 import { registerOrgContext } from './platform/org-context.js';
+import { type RealtimeHub } from './realtime/hub.js';
+import { registerRealtimeRoutes } from './realtime/routes.js';
 
 export interface AppDependencies {
   config: Config;
@@ -30,6 +32,7 @@ export interface AppDependencies {
   organizations?: OrganizationService;
   incidents?: IncidentService;
   ai?: { service: AiOrchestrationService; redis: Redis };
+  realtime?: RealtimeHub;
   /** Database used by the organization-context hook to resolve membership. */
   db?: Database;
   /** Redis client backing the rate limiter; omitted in tests for an in-memory limiter. */
@@ -68,6 +71,7 @@ export async function buildApp({
   organizations,
   incidents,
   ai,
+  realtime,
   db,
   rateLimitRedis,
 }: AppDependencies): Promise<FastifyInstance> {
@@ -138,6 +142,10 @@ export async function buildApp({
 
   if (ai) {
     registerAiRoutes(app, { service: ai.service, redis: ai.redis });
+  }
+
+  if (realtime) {
+    registerRealtimeRoutes(app, realtime);
   }
 
   return app;
