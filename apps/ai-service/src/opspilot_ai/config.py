@@ -35,8 +35,10 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai-compatible", "fake"] = "openai-compatible"
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_api_key: str | None = None
-    llm_model: str = "llama-3.3-70b-versatile"
+    llm_model: str = "openai/gpt-oss-120b"
     llm_supports_json_schema: bool = True
+    #: Strict mode forbids free-form objects, which tool arguments require.
+    llm_strict_json_schema: bool = False
 
     # Shared secret for calls from the worker. The AI service is internal and
     # must never be reachable without it.

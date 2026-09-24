@@ -32,8 +32,13 @@ A useful default for "why did this start failing?" is: recent deployments for
 the affected service, grouped error patterns, the relevant metric, and a search
 of past incidents or runbooks for the same failure mode.
 
-Available tools:
+Available tools (use these argument names exactly — anything else is rejected):
 {tools}
+
+Example step:
+{{"tool": "get_deployments",
+  "arguments": {{"service": "payment-service", "window_minutes": 240}},
+  "reason": "what changed before onset"}}
 
 Incident:
 {incident}

@@ -29,13 +29,32 @@ export interface ActionDefinition {
   ) => Promise<Record<string, unknown>>;
 }
 
+export interface DeploymentRecord {
+  version: string;
+  status: string;
+  startedAt: Date;
+}
+
 export interface ExecutorDependencies {
   incidents: IncidentService;
+  /** Reads deployment history so a rollback target is verified, not trusted. */
+  deployments?: {
+    recent: (organizationId: string, service: string, limit: number) => Promise<DeploymentRecord[]>;
+  };
   /** Simulated in the demo; a real deploy adapter implements this later. */
   deploy?: {
     rollback: (service: string, toVersion: string) => Promise<Record<string, unknown>>;
     restart: (service: string) => Promise<Record<string, unknown>>;
   };
+}
+
+/** First of `keys` present as a non-empty string; models vary their naming. */
+function firstString(args: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = args[key];
+    if (typeof value === 'string' && value.trim() !== '') return value;
+  }
+  return null;
 }
 
 function requireString(args: Record<string, unknown>, key: string): string {
@@ -44,6 +63,40 @@ function requireString(args: Record<string, unknown>, key: string): string {
     throw new AppError(400, 'invalid_action_arguments', `Action argument "${key}" is required`);
   }
   return value;
+}
+
+/**
+ * Works out which service an action targets.
+ *
+ * A model names this field differently from run to run, and its value could be
+ * wrong anyway. The incident's affected service is authoritative, so it wins;
+ * an argument is only used when it names one of those services. This is the
+ * "re-validate against current state" rule from ADR-007 doing real work.
+ */
+async function resolveService(
+  args: Record<string, unknown>,
+  context: ExecutionContext,
+  incidents: IncidentService,
+): Promise<string> {
+  const affected = context.incidentId
+    ? (await incidents.get(context.organizationId, context.incidentId)).services.map(
+        (service) => service.slug,
+      )
+    : [];
+
+  const candidate = firstString(args, ['service', 'service_slug', 'service_name']);
+
+  if (candidate && affected.includes(candidate)) return candidate;
+  if (affected.length === 1 && affected[0]) return affected[0];
+  if (candidate && affected.length === 0) return candidate;
+
+  throw new AppError(
+    400,
+    'ambiguous_service',
+    affected.length === 0
+      ? 'This incident has no affected service, so the target cannot be determined'
+      : `Specify which service to act on: ${affected.join(', ')}`,
+  );
 }
 
 export function createActionRegistry(deps: ExecutorDependencies): Map<string, ActionDefinition> {
@@ -97,25 +150,53 @@ export function createActionRegistry(deps: ExecutorDependencies): Map<string, Ac
     // Rolling back production is an administrator's decision.
     permission: 'ai:approve:operational',
     label: 'Roll back deployment',
-    execute: async (args) => {
-      const service = requireString(args, 'service');
-      const version = requireString(args, 'to_version');
-      if (!deps.deploy) {
+    execute: async (args, context) => {
+      const service = await resolveService(args, context, deps.incidents);
+      if (!deps.deploy || !deps.deployments) {
         throw new AppError(
           501,
           'action_unavailable',
           'No deployment adapter is configured in this environment',
         );
       }
-      return deps.deploy.rollback(service, version);
+
+      // The target version is resolved from deployment history, not taken from
+      // the proposal. A model-supplied version could be stale, mistyped or
+      // invented, and this executes against production (ADR-007): arguments are
+      // re-validated against current state at approval time.
+      const history = await deps.deployments.recent(context.organizationId, service, 5);
+      const succeeded = history.filter((deployment) => deployment.status === 'SUCCEEDED');
+      const current = succeeded.at(0);
+      const previous = succeeded.at(1);
+
+      if (!current || !previous) {
+        throw new AppError(
+          409,
+          'no_rollback_target',
+          `${service} has no earlier successful deployment to roll back to`,
+        );
+      }
+
+      const requestedRaw = firstString(args, ['to_version', 'target_version', 'version']);
+      const requested = requestedRaw === 'previous' ? null : requestedRaw;
+      if (requested && requested !== previous.version) {
+        const known = history.some((deployment) => deployment.version === requested);
+        if (!known) {
+          throw new AppError(400, 'unknown_version', `${service} has no deployment ${requested}`);
+        }
+      }
+
+      const target = requested ?? previous.version;
+      const result = await deps.deploy.rollback(service, target);
+      return { ...result, from: current.version, to: target };
     },
   });
 
   registry.set('RESTART_SERVICE', {
     permission: 'ai:approve:operational',
     label: 'Restart service',
-    execute: async (args) => {
-      const service = requireString(args, 'service');
+    execute: async (args, context) => {
+      const service = await resolveService(args, context, deps.incidents);
       if (!deps.deploy) {
         throw new AppError(
           501,

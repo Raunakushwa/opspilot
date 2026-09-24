@@ -12,6 +12,7 @@ import { createAiService } from './modules/ai/service.js';
 import { createIncidentRepository } from './modules/incidents/repository.js';
 import { createIncidentService } from './modules/incidents/service.js';
 import { createOrganizationRepository } from './modules/organizations/repository.js';
+import { createToolRepository } from './tool-gateway/repository.js';
 import { buildToolGateway } from './tool-gateway/server.js';
 import { createOrganizationService } from './modules/organizations/service.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -43,6 +44,7 @@ async function main(): Promise<void> {
     repository: createOrganizationRepository(db),
   });
   const incidents = createIncidentService(createIncidentRepository(db));
+  const toolRepository = createToolRepository(db);
 
   // Producing the job here keeps the API stateless: the run outlives the
   // request, and the worker owns its execution.
@@ -50,7 +52,14 @@ async function main(): Promise<void> {
   const ai = createAiService({
     repository: createAiRepository(db),
     incidents,
-    actions: createActionRegistry({ incidents, deploy: createSimulatedDeployAdapter() }),
+    actions: createActionRegistry({
+      incidents,
+      deployments: {
+        recent: (organizationId, service, limit) =>
+          toolRepository.getDeployments(organizationId, service, new Date(0), limit),
+      },
+      deploy: createSimulatedDeployAdapter(),
+    }),
     enqueue: async (input) => {
       await investigationQueue.add(
         'ai.investigate',

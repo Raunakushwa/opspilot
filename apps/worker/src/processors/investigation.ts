@@ -28,11 +28,11 @@ export interface InvestigationDependencies {
         rationale: string;
         evidenceIds: string[];
       }[];
-      estimatedCostUsd: number;
+      estimatedCostUsd: number | null;
     }) => Promise<unknown>;
     fail: (orgId: string, runId: string, error: string) => Promise<unknown>;
   };
-  estimateCost: (model: string, inputTokens: number, outputTokens: number) => number;
+  estimateCost: (model: string, inputTokens: number, outputTokens: number) => number | null;
 }
 
 interface AgentResult {
@@ -120,7 +120,7 @@ export function createInvestigationProcessor(deps: InvestigationDependencies) {
       });
 
       context.logger.info(
-        { runId, confidence: result.confidence, costUsd: estimatedCostUsd },
+        { runId, confidence: result.confidence, costUsd: estimatedCostUsd ?? 'unpriced' },
         'investigation completed',
       );
       return { runId, confidence: result.confidence };

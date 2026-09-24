@@ -4,6 +4,7 @@ Groq, OpenAI, vLLM and local Ollama all speak this protocol, so they differ
 only by base URL, model name and which features they support (ADR-006).
 """
 
+import asyncio
 import json
 import time
 from collections.abc import AsyncIterator
@@ -42,16 +43,23 @@ class OpenAICompatibleProvider:
         model: str,
         name: str = "openai-compatible",
         supports_json_schema: bool = True,
+        strict_json_schema: bool = False,
         timeout_s: float = 60.0,
         max_repairs: int = 1,
+        max_rate_limit_retries: int = 3,
     ) -> None:
         self.name = name
         self.model = model
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._supports_json_schema = supports_json_schema
+        # Strict mode cannot express a free-form object, and our tool arguments
+        # are exactly that. Non-strict still steers the model with the schema,
+        # and Pydantic validation plus one repair attempt covers the rest.
+        self._strict_json_schema = strict_json_schema
         self._timeout = timeout_s
         self._max_repairs = max_repairs
+        self._max_rate_limit_retries = max_rate_limit_retries
 
     def _headers(self) -> dict[str, str]:
         headers = {"content-type": "application/json"}
@@ -70,15 +78,39 @@ class OpenAICompatibleProvider:
         }
 
     async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Posts one completion, waiting out rate limits.
+
+        Token-per-minute limits are a fact of every hosted provider, and an
+        investigation that fails because a quota window had not rolled over is
+        a bad product. The provider tells us how long to wait; we honour it
+        rather than guessing a backoff.
+        """
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.post(
-                f"{self._base_url}/chat/completions",
-                headers=self._headers(),
-                json={"model": self.model, **payload},
-            )
-            response.raise_for_status()
-            body: dict[str, Any] = response.json()
-            return body
+            for attempt in range(self._max_rate_limit_retries + 1):
+                response = await client.post(
+                    f"{self._base_url}/chat/completions",
+                    headers=self._headers(),
+                    json={"model": self.model, **payload},
+                )
+                # 413 here is not "your prompt is too long for the model": it
+                # is "this request does not fit in what is left of your
+                # per-minute token budget". Both clear when the window rolls
+                # over, so both are worth waiting out.
+                throttled = response.status_code in (429, 413)
+                if throttled and attempt < self._max_rate_limit_retries:
+                    delay = _retry_after_seconds(response, default=30.0)
+                    logger.warning(
+                        "llm_throttled",
+                        status=response.status_code,
+                        wait_s=delay,
+                        attempt=attempt + 1,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                response.raise_for_status()
+                body: dict[str, Any] = response.json()
+                return body
+        raise RuntimeError("unreachable")
 
     @staticmethod
     def _text(body: dict[str, Any]) -> str:
@@ -113,7 +145,11 @@ class OpenAICompatibleProvider:
             {
                 "response_format": {
                     "type": "json_schema",
-                    "json_schema": {"name": schema.__name__, "schema": schema_json, "strict": True},
+                    "json_schema": {
+                        "name": schema.__name__,
+                        "schema": schema_json,
+                        "strict": self._strict_json_schema,
+                    },
                 }
             }
             if self._supports_json_schema
@@ -191,6 +227,17 @@ class OpenAICompatibleProvider:
                 content = delta.get("content")
                 if content:
                     yield str(content)
+
+
+def _retry_after_seconds(response: httpx.Response, default: float = 20.0) -> float:
+    """Reads Retry-After, capped so one wedged request cannot stall a run."""
+    header = response.headers.get("retry-after")
+    if header:
+        try:
+            return min(float(header), 60.0)
+        except ValueError:
+            pass
+    return default
 
 
 def _strip_code_fence(text: str) -> str:

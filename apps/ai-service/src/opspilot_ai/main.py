@@ -39,6 +39,7 @@ def _create_llm() -> object:
         model=settings.llm_model,
         name="openai-compatible",
         supports_json_schema=settings.llm_supports_json_schema,
+        strict_json_schema=settings.llm_strict_json_schema,
     )
 
 
