@@ -9,7 +9,7 @@ import {
   services,
   users,
 } from '@opspilot/database/schema';
-import { and, count, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 
 export type Severity = 'SEV1' | 'SEV2' | 'SEV3' | 'SEV4';
 export type Status = 'INVESTIGATING' | 'IDENTIFIED' | 'MITIGATING' | 'RESOLVED' | 'CLOSED';
@@ -80,6 +80,21 @@ async function record(
   });
 }
 
+/** Cursors are opaque to clients: encode the sort key, do not expose it. */
+export function encodeCursor(createdAt: Date, id: string): string {
+  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
+}
+
+export function decodeCursor(cursor: string): { createdAt: string; id: string } | undefined {
+  try {
+    const [createdAt, id] = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
+    if (!createdAt || !id) return undefined;
+    return { createdAt, id };
+  } catch {
+    return undefined;
+  }
+}
+
 export function createIncidentRepository(db: Database) {
   return {
     create: async (input: CreateIncidentInput, actor: AuditContext) =>
@@ -139,9 +154,15 @@ export function createIncidentRepository(db: Database) {
           conditions.push(inArray(incidents.severity, filters.severity));
         if (filters.assignedTo) conditions.push(eq(incidents.assignedTo, filters.assignedTo));
         if (filters.cursor) {
-          // Keyset pagination on the UUIDv7 primary key, which is time-ordered:
-          // stable under concurrent inserts, unlike OFFSET.
-          conditions.push(lt(incidents.id, filters.cursor));
+          // Keyset pagination on (created_at, id): stable under concurrent
+          // inserts, unlike OFFSET. The id alone is not enough — seeded rows
+          // have deterministic ids that are not in creation order.
+          const decoded = decodeCursor(filters.cursor);
+          if (decoded) {
+            conditions.push(
+              sql`(${incidents.createdAt}, ${incidents.id}) < (${decoded.createdAt}, ${decoded.id})`,
+            );
+          }
         }
         if (filters.serviceId) {
           conditions.push(
@@ -153,7 +174,7 @@ export function createIncidentRepository(db: Database) {
           .select()
           .from(incidents)
           .where(and(...conditions))
-          .orderBy(desc(incidents.id))
+          .orderBy(desc(incidents.createdAt), desc(incidents.id))
           .limit(filters.limit);
       }),
 

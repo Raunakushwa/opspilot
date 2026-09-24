@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 
 import { AppError } from '../../platform/errors.js';
 import { orgContext, requirePermission } from '../../platform/org-context.js';
+import { encodeCursor } from './repository.js';
 import { createIncidentBody, listQuery, updateIncidentBody } from './schemas.js';
 import { type IncidentService } from './service.js';
 
@@ -29,7 +30,9 @@ export function registerIncidentRoutes(app: FastifyInstance, service: IncidentSe
 
     const data = await service.list(id, query);
     // Cursor pagination: the next page starts after the last id we returned.
-    const nextCursor = data.length === query.limit ? data.at(-1)?.id : undefined;
+    const last = data.at(-1);
+    const nextCursor =
+      data.length === query.limit && last ? encodeCursor(last.createdAt, last.id) : undefined;
     return reply.send({ data, nextCursor: nextCursor ?? null });
   });
 
