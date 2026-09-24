@@ -16,7 +16,8 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:integration": "turbo run test:integration"
+    "test:integration": "turbo run test:integration",
+    "evaluate:rag": "bash scripts/evaluate-rag.sh"
   },
   "devDependencies": {
     "@opspilot/config": "workspace:*",

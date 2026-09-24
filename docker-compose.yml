@@ -153,8 +153,12 @@ services:
       TOOL_GATEWAY_URL: ${TOOL_GATEWAY_URL:-http://api:4001}
     ports: ['${AI_SERVICE_HOST_PORT:-8000}:8000']
     depends_on: [qdrant]
-    # Embedding models are downloaded once and cached across restarts.
-    volumes: ['model-cache:/home/opspilot/.cache']
+    volumes:
+      # Embedding models are downloaded once and cached across restarts.
+      - 'model-cache:/home/opspilot/.cache'
+      # Evaluation datasets in, machine-readable results out.
+      # ':z' relabels for SELinux hosts; harmless elsewhere.
+      - './eval:/eval:z'
     healthcheck:
       test:
         [
