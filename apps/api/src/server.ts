@@ -7,6 +7,7 @@ import { createAuthService } from './modules/auth/service.js';
 import { createIncidentRepository } from './modules/incidents/repository.js';
 import { createIncidentService } from './modules/incidents/service.js';
 import { createOrganizationRepository } from './modules/organizations/repository.js';
+import { buildToolGateway } from './tool-gateway/server.js';
 import { createOrganizationService } from './modules/organizations/service.js';
 import { ConfigError, loadConfig } from './config.js';
 import { postgresCheck, redisCheck } from './platform/dependencies.js';
@@ -86,6 +87,21 @@ async function main(): Promise<void> {
   };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
+
+  // The gateway listens on its own port so it can be kept off the public
+  // load balancer entirely, rather than relying on a path prefix.
+  if (config.INTERNAL_JWT_SECRET) {
+    const gateway = buildToolGateway({ db, secret: config.INTERNAL_JWT_SECRET });
+    await gateway.listen({ host: config.API_HOST, port: config.INTERNAL_PORT });
+    app.addHook('onClose', async () => {
+      await gateway.close();
+    });
+    app.log.info({ port: config.INTERNAL_PORT }, 'tool gateway listening');
+  } else if (config.NODE_ENV === 'production') {
+    throw new Error('INTERNAL_JWT_SECRET is required in production');
+  } else {
+    app.log.warn('INTERNAL_JWT_SECRET not set: tool gateway disabled');
+  }
 
   await app.listen({ host: config.API_HOST, port: config.API_PORT });
 }
