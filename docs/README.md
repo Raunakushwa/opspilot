@@ -9,5 +9,6 @@
 | [interview-notes.md](interview-notes.md) | Trade-offs, failure modes, bugs found, what is not claimed         |
 | [decisions/](decisions/)                 | Architecture Decision Records                                      |
 
-`api.md`, `ai-architecture.md`, `rag.md` and `agent.md` arrive with the
-subsystems they describe, rather than documenting code that does not exist yet.
+Each page describes code that exists. Where something is designed but not
+built, it says so — see the gaps listed in `security.md` and the "what is not
+claimed" section of `interview-notes.md`.
