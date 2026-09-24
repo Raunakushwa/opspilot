@@ -3,6 +3,7 @@ import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { buildApp } from './app.js';
+import { createRealtimeHub } from './realtime/hub.js';
 import { createAuthRepository } from './modules/auth/repository.js';
 import { createAuthService } from './modules/auth/service.js';
 import { createAiRepository } from './modules/ai/repository.js';
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
     organizations,
     incidents,
     ai: { service: ai, redis },
+    realtime: createRealtimeHub(redis),
     db,
     rateLimitRedis: redis,
   });
