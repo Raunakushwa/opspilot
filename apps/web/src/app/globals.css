@@ -28,6 +28,16 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   --radius-window: 0px;
+
+  /* Landing page only: a dark stage so the product screens read as light.
+     Pastels carry the illustration, ink carries the type. */
+  --color-night: #0d0d12;
+  --color-night-soft: #14121f;
+  --color-night-line: #2a2740;
+  --color-peach: #f0cdc2;
+  --color-lilac: #c9b3f5;
+  --color-sky: #88aaf1;
+  --color-mint: #b8faf6;
 }
 
 @layer base {

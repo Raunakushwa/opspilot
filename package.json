@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:integration": "turbo run test:integration",
-    "evaluate:rag": "bash scripts/evaluate-rag.sh"
+    "evaluate:rag": "bash scripts/evaluate-rag.sh",
+    "art": "node scripts/generate-art.mjs"
   },
   "devDependencies": {
     "@opspilot/config": "workspace:*",

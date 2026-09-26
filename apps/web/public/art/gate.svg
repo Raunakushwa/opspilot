@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 260" width="760" height="260" fill="none" role="img" aria-hidden="true"><defs>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c9b3f5"/>
+      <stop offset="1" stop-color="#b8faf6"/>
+    </linearGradient>
+  </defs><g>
+    <rect x="20" y="98" width="190" height="64" fill="#0d0d12" fill-opacity="0.92" stroke="#c9b3f5" stroke-opacity="0.9"/>
+    <text x="115" y="135" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12" fill="#fefefe" fill-opacity="0.92">agent proposes</text>
+  </g><g stroke="#88aaf1" stroke-width="2" fill="none" opacity="0.9"><line x1="222" y1="130" x2="306" y2="130"/><path d="M299 124 L306 130 L299 136"/></g><g>
+    <line x1="330" y1="24" x2="330" y2="236" stroke="#f386a1" stroke-width="2" stroke-dasharray="6 7" opacity="0.9"/>
+    <rect x="262" y="34" width="136" height="26" fill="#f386a1"/>
+    <text x="330" y="52" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" fill="#0d0d12">HUMAN DECIDES</text>
+  </g><g>
+    <rect x="360" y="98" width="180" height="64" fill="#0d0d12" fill-opacity="0.92" stroke="#b8faf6" stroke-opacity="0.9"/>
+    <text x="450" y="135" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12" fill="#fefefe" fill-opacity="0.92">api executes</text>
+  </g><g stroke="#88aaf1" stroke-width="2" fill="none" opacity="0.9"><line x1="552" y1="130" x2="612" y2="130"/><path d="M605 124 L612 130 L605 136"/></g><g>
+    <rect x="622" y="98" width="120" height="64" fill="#0d0d12" fill-opacity="0.92" stroke="#88aaf1" stroke-opacity="0.9"/>
+    <text x="682" y="135" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12" fill="#fefefe" fill-opacity="0.92">audit log</text>
+  </g></svg>
